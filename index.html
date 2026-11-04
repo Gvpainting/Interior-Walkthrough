@@ -119,7 +119,8 @@ textarea.field{resize:none;min-height:48px;line-height:1.4;display:block;overflo
 .pss .pshead{font-size:15px;font-weight:700;margin:0 0 10px}
 .pss .pshint{font-size:13px;color:var(--sub);margin:8px 2px 0}
 .pss .field{background:#fff}
-.pss .chips{margin-top:10px}
+.pss .chips{margin-top:6px}
+.pick{display:flex;flex-direction:column;gap:6px;margin-bottom:6px}.pglab{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;opacity:.55;margin:8px 0 2px}.pgrp .pglab{margin-top:4px}.pick .chip{white-space:normal;text-align:left}.pother{margin-top:4px}.psrbody{flex-basis:100%;min-width:0}
 .pss .switchrow{margin-top:12px;gap:10px}.pss .switchrow .dl{font-size:16px}
 .pslist{display:flex;flex-direction:column;gap:12px;margin-top:6px}
 .psrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,138px);grid-template-areas:'l l' 'p s';gap:6px 8px}
@@ -256,6 +257,7 @@ body.kb .toast{display:none}
  .pnote{white-space:pre-wrap;border:1px solid #ccc;border-radius:6px;padding:4px 6px;min-height:34px}
  table.pt{border-collapse:collapse;width:100%;margin-top:6px}table.pt td,table.pt th{border-bottom:1px solid #ddd;padding:3px 4px;text-align:left}
 }
+.psrow{display:block!important}.psrow .psl{margin-bottom:2px}.psrow input{grid-area:auto}
 </style>
 </head>
 <body>
@@ -288,7 +290,20 @@ const WALL_TEX=['Smooth','Textured','Plaster','Brick'], CEIL_TEX=['Smooth','Text
 const PAINT=[['baseboards','Baseboards'],['crown','Crown Moulding'],['stairs','Stairs'],['fireplace','Fireplace'],['shelving','Shelving'],['closets','Closets']];
 const COUNTS=[['windowTrim','Window trim'],['windowFrame','Window frame'],['doorTrim','Door trim'],['doorFrame','Door frame'],['doors','Doors'],['railingLnft','Railing (ln ft)'],['spindles','Spindles']];
 const CAB=[['doors','Doors'],['drawers','Drawers'],['boxFlats','Box flats']];
-const SHEENS=['Flat','Matte','Eggshell','Satin','Semi-gloss','Gloss'];
+const SHEENS=['Flat','Matte','Eggshell','Satin','Semi-Gloss','Gloss'];
+const PROD_GROUPS=[[null,['Duration Interior']],['Upgrade',['Pre-Cat Epoxy','Scuff Tough','Emerald']],['Budget',['Super Paint']]];
+const PROD_OPTS=PROD_GROUPS.flatMap(g=>g[1]);
+const DEF_PRODUCT='Duration Interior',DEF_SHEEN='Satin';
+function mapProd(t){t=(t||'').trim();if(!t)return '';const ex=PROD_OPTS.find(o=>o.toLowerCase()===t.toLowerCase());if(ex)return ex;
+ const l=t.toLowerCase().replace(/[^a-z]/g,'');
+ if(l.includes('duration')||l.includes('standard'))return 'Duration Interior';
+ if(l.includes('precat')||l.includes('epoxy'))return 'Pre-Cat Epoxy';
+ if(l.includes('scufftough'))return 'Scuff Tough';
+ if(l.includes('superpaint'))return 'Super Paint';
+ if(l.includes('emerald')&&!l.includes('urethane'))return 'Emerald';
+ return t}
+function mapSheen(t){t=(t||'').trim();if(!t)return '';const l=t.toLowerCase().replace(/[^a-z]/g,'');return SHEENS.find(x=>x.toLowerCase().replace(/[^a-z]/g,'')===l)||t}
+function sheenIn(t){const l=(t||'').toLowerCase().replace(/semi[\s-]?gloss/,'semigloss');return ['semigloss','eggshell','satin','matte','flat','gloss'].map(w=>l.includes(w)&&w).find(Boolean)}
 const PRODUCTS=['SW Duration','SW Emerald','SW SuperPaint','SW ProMar 200','SW Emerald Urethane Trim Enamel','SW Ceiling Bright White (flat ceiling paint)','SW Cashmere','SW Captivate','BM Regal Select','BM Advance','BM Aura','BM Ben','BM Waterborne Ceiling Paint'];
 // Surfaces that can carry their own product/sheen. A surface only appears when the room has it selected/counted.
 const SURFACES=[
@@ -314,13 +329,15 @@ function blankRoom(name=''){
 }
 function blankWalkthrough(){
  return {schema:SCHEMA,id:uid(),created:Date.now(),updated:Date.now(),uploadedAt:null,jobCollapsed:false,
-  job:{address:'',name:'',phone:'',estimate:'',when:'',source:'manual',date:today(),schedule:'',product:'',removesArt:'',movesFurniture:'',notes:''},
+  job:{address:'',name:'',phone:'',estimate:'',when:'',source:'manual',date:today(),schedule:'',product:DEF_PRODUCT,sheen:DEF_SHEEN,removesArt:'',movesFurniture:'',notes:''},
   general:{notes:'',dueDate:'',colors:'',tags:[]},generalCollapsed:false,
   rooms:[],extras:[]};
 }
 const filled=v=>v!==''&&v!=null&&v!==0;
 function migrate(d){
- d.job=d.job||{}; if(d.job.estimate==null)d.job.estimate='';
+ d.job=d.job||{};
+ if(d.job.sheen==null){const w=sheenIn(d.job.product);d.job.sheen=w?mapSheen(w):''}
+ d.job.sheen=mapSheen(d.job.sheen); d.job.product=mapProd(d.job.product); if(d.job.estimate==null)d.job.estimate='';
  if(d.job.address==null)d.job.address='';
  if(d.job.customer||d.job.email){d.legacyContact=Object.assign({},d.legacyContact,{customer:d.job.customer||'',phone:d.job.phone||'',email:d.job.email||''})}
  if(d.job.name==null)d.job.name=(d.legacyContact&&d.legacyContact.customer)||'';
@@ -336,6 +353,8 @@ function migrate(d){
   // v5: per-room / per-surface product & sheen
   const ps=r.productSheen||{};
   n.productSheen={default:Object.assign({product:'',sheen:''},ps.default||{}),bySurface:Object.assign({},ps.bySurface||{})};
+  n.productSheen.default.product=mapProd(n.productSheen.default.product);n.productSheen.default.sheen=mapSheen(n.productSheen.default.sheen);
+  for(const k in n.productSheen.bySurface){const o=n.productSheen.bySurface[k]||{};n.productSheen.bySurface[k]={product:mapProd(o.product),sheen:mapSheen(o.sheen)}}
   if(!r.ui||r.ui.psEach==null) n.ui.psEach=hasOverrides(n);
   return n});
  d.job=Object.assign(blankWalkthrough().job,d.job||{}); d.extras=d.extras||[];
@@ -398,9 +417,15 @@ const psTxt=x=>[x.product,x.sheen&&x.sheen.toLowerCase()].filter(Boolean).join('
 const ovOf=(r,k)=>{const o=(r.productSheen.bySurface||{})[k]||{};return {product:(o.product||'').trim(),sheen:o.sheen||''}};
 function hasOverrides(r){return Object.values((r.productSheen&&r.productSheen.bySurface)||{}).some(o=>o&&((o.product||'').trim()||o.sheen))}
 const selSurfaces=r=>SURFACES.filter(([,,f])=>f(r));
-function roomDefault(r){const D=r.productSheen.default,p=(D.product||'').trim(),j=(S.job.product||'').trim();
- if(p||D.sheen) return {product:p||j,sheen:D.sheen||'',source:'room'};
- return {product:j,sheen:'',source:j?'job':'none'}}
+function roomDefault(r){const D=r.productSheen.default,p=(D.product||'').trim(),j=(S.job.product||'').trim(),js=S.job.sheen||'';
+ if(p||D.sheen) return {product:p||j,sheen:D.sheen||js,source:'room'};
+ return {product:j,sheen:js,source:(j||js)?'job':'none'}}
+const OTHER=new Set();
+function pickHTML(k,path,val,groups,inherit){const opts=groups.flatMap(g=>g[1]),oth=(val&&!opts.includes(val))||OTHER.has(k+path);
+ const btn=(v,l,on,a='pick')=>`<button type="button" class="chip sm${on?' on':''}" data-act="${a}" data-p="${path}" data-v="${esc(v)}" aria-pressed="${!!on}">${esc(l)}</button>`;
+ return `<div class="pick" data-pick="${path}">${inherit?`<div class="chips">${btn('',inherit,!val&&!oth)}</div>`:''}
+ ${groups.map(([lab,o])=>`<div class="pgrp">${lab?`<div class="pglab">${lab}</div>`:''}<div class="chips">${o.map(v=>btn(v,v,val===v&&!oth)).join('')}${lab===groups[groups.length-1][0]?btn('','Other…',oth,'pickother'):''}</div></div>`).join('')}
+ ${oth?`<input class="field pother" data-f="${path}" value="${esc(val)}" placeholder="Type it in" autocomplete="off" autocapitalize="words" enterkeyhint="done">`:''}</div>`}
 function psEffective(r){const d=roomDefault(r),out={};
  for(const [k,l] of selSurfaces(r)){const o=ovOf(r,k),ov=!!(o.product||o.sheen);
   out[k]={surface:l,product:o.product||d.product,sheen:o.sheen||d.sheen,source:ov?'surface':d.source}}
@@ -461,7 +486,8 @@ function jobCard(){
 ${jobHead(J)}
   <label class="half"><span class="flabel">Walkthrough date</span>${field('date',J.date,'','type="date"')}</label>
   <label class="half"><span class="flabel">Schedule</span>${field('schedule',J.schedule,'e.g. Early December')}</label>
-  <label class="half"><span class="flabel">Default product / sheen (job)</span>${field('product',J.product,'e.g. SW Duration eggshell','list="gvProducts" autocapitalize="words"')}</label>
+  <div class="full"><span class="flabel">Paint (job default)</span>${pickHTML('job:','product',J.product,PROD_GROUPS,null)}</div>
+  <div class="full"><span class="flabel">Sheen (job default)</span>${pickHTML('job:','sheen',J.sheen,[[null,SHEENS]],null)}</div>
   <div class="full half"><span class="flabel">Who removes art & hangings?</span>${seg('removesArt')}</div>
   <div class="full half"><span class="flabel">Who moves furniture?</span>${seg('movesFurniture')}</div>
  </div></div></section>`;
@@ -515,10 +541,10 @@ function roomCard(r,i){
  <div class="rfoot"><button class="btn" data-act="dup">Duplicate</button><button class="btn danger" data-act="del">Delete</button><button class="btn primary grow" data-act="done">Done</button></div>
  </section>`;
 }
-function psBlock(r){const D=r.productSheen.default,j=(S.job.product||'').trim();
+function psBlock(r){const D=r.productSheen.default,j=(S.job.product||'').trim(),js=S.job.sheen||'',k=r.id+':';
  return `<div class="pss" data-ps><div class="pshead">Product & sheen</div>
- <input class="field" list="gvProducts" data-f="productSheen.default.product" value="${esc(D.product)}" placeholder="${esc(j?'Job default: '+j:'Product, e.g. SW Duration')}" autocomplete="off" autocapitalize="words" enterkeyhint="done" aria-label="Room product">
- <div class="chips" role="group" aria-label="Room sheen">${SHEENS.map(t=>chip('productSheen.default.sheen',t,D.sheen===t,t,'sm')).join('')}</div>
+ <div class="pglab">Paint</div>${pickHTML(k,'productSheen.default.product',D.product,PROD_GROUPS,'Same as job'+(j?' ('+j+')':''))}
+ <div class="pglab">Sheen</div>${pickHTML(k,'productSheen.default.sheen',D.sheen,[[null,SHEENS]],'Same as job'+(js?' ('+js+')':''))}
  <div data-pslist>${psListHTML(r)}</div></div>`}
 function psListHTML(r){const sel=selSurfaces(r),d=roomDefault(r),dt=psTxt(d)||'nothing set';
  if(!sel.length) return `<div class="pshint">Applies to every surface you pick above.</div>`;
@@ -527,8 +553,8 @@ function psListHTML(r){const sel=selSurfaces(r),d=roomDefault(r),dt=psTxt(d)||'n
  ${sel.length>1||r.ui.psEach?`<button class="switchrow${r.ui.psEach?' on':''}" data-chip="ui.psEach" role="switch" aria-checked="${!!r.ui.psEach}"><span class="dl">Different for each surface</span><span class="sw"></span></button>`:''}
  ${reveal('ui.psEach',`<div class="pslist">${sel.map(([k,l])=>{const o=ovOf(r,k),ov=!!(o.product||o.sheen);
   return `<div class="psrow${ov?' ov':''}" data-psrow="${k}"><div class="psl">${esc(l)}<small data-pseff>${ov?'':'Same as room'}</small></div>
-   <input class="field" list="gvProducts" data-f="productSheen.bySurface.${k}.product" value="${esc(o.product)}" placeholder="${esc('Same as room: '+dt)}" autocomplete="off" autocapitalize="words" enterkeyhint="done" aria-label="${esc(l)} product">
-   <select class="field" data-f="productSheen.bySurface.${k}.sheen" aria-label="${esc(l)} sheen"><option value="">${esc(d.sheen?'Room: '+d.sheen:'Sheen')}</option>${SHEENS.map(t=>`<option${o.sheen===t?' selected':''}>${t}</option>`).join('')}</select></div>`}).join('')}</div>`,r.ui.psEach)}`}
+   <div class="psrbody"><div class="pglab">Paint</div>${pickHTML(r.id+':','productSheen.bySurface.'+k+'.product',o.product,PROD_GROUPS,'Same as room'+(d.product?' ('+d.product+')':''))}
+   <div class="pglab">Sheen</div>${pickHTML(r.id+':','productSheen.bySurface.'+k+'.sheen',o.sheen,[[null,SHEENS]],'Same as room'+(d.sheen?' ('+d.sheen+')':''))}</div></div>`}).join('')}</div>`,r.ui.psEach)}`}
 function psSync(el,r){ // keep the per-surface list in step with what's selected, without stealing focus while typing
  const box=el.querySelector('[data-pslist]'); if(!box) return;
  const sig=selSurfaces(r).map(x=>x[0]).join()+'|'+(r.ui.psEach?1:0);
@@ -536,7 +562,7 @@ function psSync(el,r){ // keep the per-surface list in step with what's selected
  const d=roomDefault(r),dt=psTxt(d)||'nothing set';
  box.querySelectorAll('[data-psrow]').forEach(row=>{const k=row.dataset.psrow,o=ovOf(r,k),ov=!!(o.product||o.sheen);
   row.classList.toggle('ov',ov); row.querySelector('[data-pseff]').textContent=ov?'':'Same as room';
-  row.querySelector('input').placeholder='Same as room: '+dt; row.querySelector('option[value=""]').textContent=d.sheen?'Room: '+d.sheen:'Sheen'});
+});
 }
 const chipSeg=(p,v,l,cur)=>`<button data-chip="${p}" data-val="${v}" class="${cur===v?'on':''}">${l}</button>`;
 function extrasCard(){
@@ -653,6 +679,9 @@ function act(a,b){
  case 'changejob':S.jobPicking=true;S.jobTyping=false;render();break;
  case 'pickcancel':case 'jobdone':S.jobPicking=false;S.jobTyping=false;rememberAddr(S.job.address);render();break;
  case 'typeaddr':S.jobPicking=false;S.jobTyping=true;if(S.job.source==='link'){Object.assign(S.job,{name:'',phone:'',estimate:'',when:'',source:'manual'})}save();render();setTimeout(()=>{const i=document.querySelector('#job [data-f=address]');i&&i.focus()},50);break;
+ case 'pick':case 'pickother':{const o=ctx(b),p=b.dataset.p,k=(roomEl?roomEl.dataset.room:'job')+':'+p;
+   if(a==='pick'){OTHER.delete(k);setP(o,p,b.dataset.v)}else{OTHER.add(k);const cur=getP(o,p)||'';if(PROD_OPTS.includes(cur)||SHEENS.includes(cur))setP(o,p,'')}
+   save();const y=scrollY;render();scrollTo(0,y);if(a==='pickother')setTimeout(()=>{const i=document.querySelector((roomEl?`[data-room="${roomEl.dataset.room}"]`:'#job')+` .pick[data-pick="${p}"] .pother`);i&&i.focus()},30);break}
  case 'quickadd':addRoom(b.dataset.name);break;
  case 'addcustom':addCustom(b);break;
   case 'othershow':{const box=b.closest('.picker').querySelector('.cother');box.hidden=false;b.classList.add('on');b.setAttribute('aria-expanded','true');const i=box.querySelector('.cname');i.focus();setTimeout(()=>keepInView(i),320);break}
@@ -739,7 +768,7 @@ async function exportJSON(){
 function renderPrint(){
  const J=S.job,logo=$('#logo').src,c=(on,l)=>`<span class="c${on?' on':''}">${esc(l)}</span>`,u=v=>`<span class="u">${esc(v)}&nbsp;</span>`,note=v=>`<div class="pnote">${esc(v)}</div>`;
  const jobPg=`<div class="pg"><div class="ph"><img src="${logo}"><div class="pc"><div class="ptitle" style="margin:0">Interior Walkthrough</div>${esc(J.address)}<br><span style="font-weight:400">${esc([J.estimate&&'PaintScout #'+J.estimate,J.date].filter(Boolean).join(' · '))}</span></div></div>
- <div class="pr b">Schedule: ${u(J.schedule)} Default product / sheen: ${u(J.product)}</div>
+ <div class="pr b">Schedule: ${u(J.schedule)} Default paint / sheen: ${u([J.product,J.sheen].filter(Boolean).join(' '))}</div>
  <div class="pr b">Removes art: ${c(J.removesArt==='customer','Customer')}${c(J.removesArt==='grandview','Grandview')} &nbsp; Moves furniture: ${c(J.movesFurniture==='customer','Customer')}${c(J.movesFurniture==='grandview','Grandview')}</div>
  <div class="ps" style="margin-top:10px">General notes</div>${note(S.general.notes)}
  <div class="pr b" style="margin-top:6px">Due / done by: ${u(S.general.dueDate)} Colors discussed: ${u(S.general.colors)}</div>
