@@ -67,6 +67,9 @@ textarea.field{resize:none;min-height:48px;line-height:1.4;display:block;overflo
 
 /* chips */
 .chips{display:flex;flex-wrap:wrap;gap:8px}
+.jcard{background:var(--fill);border-radius:16px;padding:14px 16px}.jcard .addrpick{background:#fff;color:#2563c9;font-weight:600}.jaddr{font-size:24px;font-weight:700;line-height:1.2}.jline{font-size:17px;margin-top:4px}.jline a{color:#2563c9;text-decoration:none;display:inline-block;min-height:44px;line-height:44px}.jline.dim{opacity:.65;font-size:15px}
+.jpick{display:block}.jopt{display:block;width:100%;text-align:left;min-height:56px;padding:10px 14px;margin:6px 0;border-radius:14px;background:var(--fill);color:var(--ink)}.jopt b{display:block;font-size:17px}.jopt small{opacity:.65;font-size:14px}
+.addrpick{margin:8px 8px 0 0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .chip{min-height:44px;padding:0 16px;border-radius:999px;background:var(--fill);font-size:16px;font-weight:500;color:var(--ink);transition:background .15s,color .15s,transform .1s}
 .chip:active{transform:scale(.96)}
 .chip.on{background:var(--accent);color:#fff}
@@ -311,12 +314,20 @@ function blankRoom(name=''){
 }
 function blankWalkthrough(){
  return {schema:SCHEMA,id:uid(),created:Date.now(),updated:Date.now(),uploadedAt:null,jobCollapsed:false,
-  job:{customer:'',phone:'',address:'',date:today(),schedule:'',product:'',removesArt:'',movesFurniture:'',notes:''},
+  job:{address:'',name:'',phone:'',estimate:'',when:'',source:'manual',date:today(),schedule:'',product:'',removesArt:'',movesFurniture:'',notes:''},
   general:{notes:'',dueDate:'',colors:'',tags:[]},generalCollapsed:false,
   rooms:[],extras:[]};
 }
 const filled=v=>v!==''&&v!=null&&v!==0;
 function migrate(d){
+ d.job=d.job||{}; if(d.job.estimate==null)d.job.estimate='';
+ if(d.job.address==null)d.job.address='';
+ if(d.job.customer||d.job.email){d.legacyContact=Object.assign({},d.legacyContact,{customer:d.job.customer||'',phone:d.job.phone||'',email:d.job.email||''})}
+ if(d.job.name==null)d.job.name=(d.legacyContact&&d.legacyContact.customer)||'';
+ if(d.job.phone==null)d.job.phone=(d.legacyContact&&d.legacyContact.phone)||'';
+ for(const k of ['when']) if(d.job[k]==null)d.job[k]='';
+ if(!d.job.source)d.job.source='manual';
+ for(const k of ['customer','email'])delete d.job[k];
  const b=blankRoom();
  d.rooms=(d.rooms||[]).map(r=>{const n=Object.assign(blankRoom(),r);
   for(const k of ['lineCutting','circle','painting','counts','cabinets','ui'])n[k]=Object.assign({},b[k],r[k]||{});
@@ -342,7 +353,7 @@ function save(){
  try{
   localStorage.setItem(K_PRE+S.id,JSON.stringify(S));
   const ix=readIndex();
-  ix[S.id]={id:S.id,customer:S.job.customer,address:S.job.address,date:S.job.date,rooms:S.rooms.length,updated:S.updated,uploadedAt:S.uploadedAt};
+  ix[S.id]={id:S.id,customer:jobLabel(),address:'',date:S.job.date,rooms:S.rooms.length,updated:S.updated,uploadedAt:S.uploadedAt};
   localStorage.setItem(K_INDEX,JSON.stringify(ix)); localStorage.setItem(K_CUR,S.id);
   lastSave=S.updated; showSaved(true);
  }catch(e){toast('Could not save on this device ('+e.name+'). Export now.',6000)}
@@ -414,23 +425,41 @@ function roomSummary(r){
 }
 
 /* ---------- components ---------- */
-const field=(f,v,ph='',extra='')=>`<input class="field" data-f="${f}" value="${esc(v)}" placeholder="${esc(ph)}" autocomplete="off" ${extra}>`;
+const field=(f,v,ph='',extra='')=>`<input class="field" data-f="${f}" value="${esc(v)}" placeholder="${esc(ph)}" ${/autocomplete=/.test(extra)?"":"autocomplete=\"off\""} ${extra}>`;
 const area=(f,v,ph)=>`<textarea class="field" rows="1" data-f="${f}" placeholder="${esc(ph)}">${esc(v)}</textarea>`;
 const chip=(p,l,on,val,cls='')=>`<button class="chip ${cls}${on?' on':''}" data-chip="${p}"${val!=null?` data-val="${esc(val)}"`:''} aria-pressed="${!!on}">${esc(l)}</button>`;
 const stepRow=(f,l,v)=>`<div class="row"><span class="rl">${l}</span><span class="stepper"><button data-act="step" data-f="${f}" data-d="-1" aria-label="Less">−</button><input data-f="${f}" data-num value="${esc(v)}" inputmode="decimal" autocomplete="off" aria-label="${esc(l)}"><button data-act="step" data-f="${f}" data-d="1" aria-label="More">+</button></span></div>`;
 const reveal=(p,inner,open)=>`<div class="reveal${open?' open':''}" data-reveal="${p}"><div>${inner}</div></div>`;
 
+const K_UP='gv-upcoming-jobs';
+function upcoming(){try{return JSON.parse(localStorage.getItem(K_UP))||[]}catch(e){return []}}
+function saveUpcoming(j){const key=x=>x.estimate?'e:'+x.estimate:'a:'+(x.address||'').toLowerCase();
+ const old=upcoming().find(x=>key(x)===key(j));if(old)j=Object.assign({},old,Object.fromEntries(Object.entries(j).filter(([,v])=>v)));const l=[j,...upcoming().filter(x=>key(x)!==key(j))].slice(0,30);try{localStorage.setItem(K_UP,JSON.stringify(l))}catch(e){}}
+function fmtWhen(w){if(!w)return '';const d=new Date(w);return isNaN(d)?w:d.toLocaleString([],{weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}
+function jobHead(J){
+ const picks=()=>{const up=upcoming(),ra=recentAddrs().filter(a=>!up.some(u=>(u.address||'').toLowerCase()===a.toLowerCase()));
+  return `<div class="full jpick"><span class="flabel">Pick a job</span>${up.map((u,i)=>`<button type="button" class="jopt" data-act="pickjob" data-i="${i}"><b>${esc(u.address||'(no address)')}</b><small>${esc([u.name,u.estimate&&'PaintScout #'+u.estimate,fmtWhen(u.when)].filter(Boolean).join(' · '))}</small></button>`).join('')}
+  ${ra.slice(0,6).map(x=>`<button type="button" class="chip addrpick" data-act="pickaddr" data-addr="${esc(x)}">${esc(x)}</button>`).join('')}
+  <div><button type="button" class="chip addrpick" data-act="typeaddr">Type an address</button>${J.address?'<button type="button" class="chip addrpick" data-act="pickcancel">Cancel</button>':''}</div></div>`};
+ if(S.jobPicking) return picks();
+ if(J.address&&!S.jobTyping) return `<div class="full jcard"><div class="jaddr">${esc(J.address)}</div>
+  ${J.name?`<div class="jline">${esc(J.name)}</div>`:''}${J.phone?`<div class="jline"><a href="tel:${esc(J.phone.replace(/[^\d+]/g,''))}">${esc(J.phone)}</a></div>`:''}
+  <div class="jline dim">${esc([J.estimate&&'PaintScout #'+J.estimate,fmtWhen(J.when)].filter(Boolean).join(' · '))}</div>
+  <button type="button" class="chip addrpick" data-act="changejob">Change job</button></div>`;
+ return `<label class="full"><span class="flabel">Job address</span>${field('address',J.address,'Street, city','autocomplete="street-address" autocapitalize="words" list="gvAddrs" enterkeyhint="done"')}<div class="subl" style="margin-top:6px">The address being painted. We match it to the PaintScout job.</div><datalist id="gvAddrs">${recentAddrs().map(x=>`<option value="${esc(x)}">`).join('')}</datalist></label>
+ ${(upcoming().length||recentAddrs().length)?'<div class="full"><button type="button" class="chip addrpick" data-act="changejob">Pick a saved job</button>'+(J.address?'<button type="button" class="chip addrpick" data-act="jobdone">Done</button>':'')+'</div>':(J.address?'<div class="full"><button type="button" class="chip addrpick" data-act="jobdone">Done</button></div>':'')}`;
+}
+function applyJob(j,src){const J=S.job;J.address=j.address||'';J.name=j.name||'';J.phone=j.phone||'';J.estimate=j.estimate||'';J.when=j.when||'';J.source=src;
+ S.jobPicking=false;S.jobTyping=false;rememberAddr(J.address);save();render();title()}
 function jobCard(){
  const J=S.job;
- if(S.jobCollapsed) return `<section class="card" id="job" data-scope="job"><button class="mini" data-act="jobopen"><span class="badge dim">J</span><span class="mt"><b>${esc(J.customer||'Job info')}</b><small>${esc([J.address,J.date,J.schedule].filter(Boolean).join(' · ')||'Tap to add customer and address')}</small>${genLine()?`<small>${esc(genLine())}</small>`:''}</span><span class="chev">›</span></button></section>`;
+ if(S.jobCollapsed) return `<section class="card" id="job" data-scope="job"><button class="mini" data-act="jobopen"><span class="badge dim">J</span><span class="mt"><b>${esc(J.address||'Job info')}</b><small>${esc([J.date,J.schedule].filter(Boolean).join(' · ')||'Tap to add the job address')}</small>${genLine()?`<small>${esc(genLine())}</small>`:''}</span><span class="chev">›</span></button></section>`;
  const seg=(f)=>`<div class="seg">${['customer','grandview'].map(v=>`<button data-chip="${f}" data-val="${v}" class="${J[f]===v?'on':''}">${v==='customer'?'Customer':'Grandview'}</button>`).join('')}</div>`;
  return `<section class="card${enterId==='job'?' enter':''}" id="job" data-scope="job">
- <div class="cpad"><div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:16px"><div style="flex:1"><h2 class="ctitle">Job</h2><div class="csub">Fill in what you have. Nothing is required.</div></div>${S.rooms.length?'<button class="iconbtn" data-act="jobclose" aria-label="Collapse">⌃</button>':''}</div>
+ <div class="cpad"><div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:16px"><div style="flex:1"><h2 class="ctitle">Job</h2><div class="csub">Customer details come from the PaintScout / GoHighLevel link.</div></div>${S.rooms.length?'<button class="iconbtn" data-act="jobclose" aria-label="Collapse">⌃</button>':''}</div>
  <div class="fgrid wide">
-  <label class="full half"><span class="flabel">Customer</span>${field('customer',J.customer,'Name','autocapitalize="words"')}</label>
-  <label class="half"><span class="flabel">Phone</span>${field('phone',J.phone,'(563) 555-0123','inputmode="tel"')}</label>
+${jobHead(J)}
   <label class="half"><span class="flabel">Walkthrough date</span>${field('date',J.date,'','type="date"')}</label>
-  <label class="full"><span class="flabel">Address</span>${field('address',J.address,'Street, city','autocapitalize="words"')}</label>
   <label class="half"><span class="flabel">Schedule</span>${field('schedule',J.schedule,'e.g. Early December')}</label>
   <label class="half"><span class="flabel">Default product / sheen (job)</span>${field('product',J.product,'e.g. SW Duration eggshell','list="gvProducts" autocapitalize="words"')}</label>
   <div class="full half"><span class="flabel">Who removes art & hangings?</span>${seg('removesArt')}</div>
@@ -548,7 +577,11 @@ function renderSwitcher(){
  $('#switcher').innerHTML=`<button class="pill" data-act="jump" data-to="job">Job</button><button class="pill" data-act="jump" data-to="general">Notes</button>`+S.rooms.map((r,i)=>`<button class="pill${act&&act.id===r.id?' on':''}" data-act="jumproom" data-id="${r.id}">${i+1}. ${esc(r.name||'Room')}</button>`).join('')+(S.rooms.length?`<button class="pill" data-act="jump" data-to="review">Review</button>`:'');
  const on=$('#switcher .pill.on'); if(on) on.scrollIntoView({inline:'center',block:'nearest'});
 }
-function title(){$('#ttl').textContent=S.job.customer||'New walkthrough'}
+const K_ADDRS='gv-recent-addresses';
+function recentAddrs(){try{return JSON.parse(localStorage.getItem(K_ADDRS))||[]}catch(e){return []}}
+function rememberAddr(a){a=(a||'').trim();if(a.length<5)return;const l=[a,...recentAddrs().filter(x=>x.toLowerCase()!==a.toLowerCase())].slice(0,12);try{localStorage.setItem(K_ADDRS,JSON.stringify(l))}catch(e){}}
+function jobLabel(){return S.job.address||''}
+function title(){$('#ttl').textContent=jobLabel()||'New walkthrough'}
 function meta(id){
  const r=roomById(id),el=document.getElementById('room-'+id); if(!r||!el||r.collapsed) return;
  const d=derive(r),p=[];
@@ -566,11 +599,13 @@ function sync(scope,o){
 }
 
 /* ---------- events ---------- */
+document.addEventListener('focusout',e=>{const t=e.target;if(t&&t.dataset&&t.dataset.f==='address'&&t.closest('[data-scope=job]'))rememberAddr(t.value)});
 document.addEventListener('input',e=>{
  const t=e.target; if(!t.dataset||!t.dataset.f||!S) return;
  const o=ctx(t); setP(o,t.dataset.f,'num' in t.dataset?numify(t.value):t.value);
  if(t.tagName==='TEXTAREA') grow(t);
  const r=t.closest('[data-room]');
+ if(t.dataset.f==='address'&&t.closest('[data-scope=job]')){S.jobTyping=true;S.job.source='manual';title()}
  if(r){meta(r.dataset.room); if(t.dataset.f==='name') renderSwitcher();
 }
  if(t.closest('[data-scope=job]')) title();
@@ -601,7 +636,7 @@ function setActive(id){S.rooms.forEach(r=>r.collapsed=r.id!==id)}
 function uniqueName(n){if(!n)return '';const has=x=>S.rooms.some(r=>r.name.toLowerCase()===x.toLowerCase());if(!has(n))return n;let i=2;while(has(n+' '+i))i++;return n+' '+i}
 function addRoom(name){
  const n=blankRoom(uniqueName(name)); S.rooms.push(n); setActive(n.id);
- if(S.job.customer||S.job.address) S.jobCollapsed=true;
+ if(S.job.address){rememberAddr(S.job.address);S.jobCollapsed=true}
  if(!S.rooms.some(x=>x.id!==n.id)) S.generalCollapsed=true; // first room: tuck the notes away (one tap to reopen)
  enterId=n.id; save(); render(); closeSheet(); scrollToEl('room-'+n.id);
 }
@@ -612,6 +647,12 @@ function act(a,b){
  case 'step':{const o=ctx(b),f=b.dataset.f,cur=getP(o,f);let v=(typeof cur==='number'?cur:0)+(+b.dataset.d);v=v<=0?'':v;setP(o,f,v);
   b.parentNode.querySelector('input').value=v; if(roomEl)meta(roomEl.dataset.room); save(); break}
  case 'addsheet':showAdd();break;
+ case 'pickaddr':applyJob({address:b.dataset.addr},'manual');break;
+ case 'pickjob':{const u=upcoming()[+b.dataset.i];if(u){const d=Object.values(readIndex()).map(m=>loadDoc(m.id)).filter(Boolean).find(d=>d.job&&(u.estimate?d.job.estimate===u.estimate:(d.job.address||'').toLowerCase()===(u.address||'').toLowerCase()));
+   if(d&&d.id!==S.id){openDoc(d.id)}else{if(!d&&(S.rooms.length||S.job.address))openDoc(null);applyJob(u,'link')}}break}
+ case 'changejob':S.jobPicking=true;S.jobTyping=false;render();break;
+ case 'pickcancel':case 'jobdone':S.jobPicking=false;S.jobTyping=false;rememberAddr(S.job.address);render();break;
+ case 'typeaddr':S.jobPicking=false;S.jobTyping=true;if(S.job.source==='link'){Object.assign(S.job,{name:'',phone:'',estimate:'',when:'',source:'manual'})}save();render();setTimeout(()=>{const i=document.querySelector('#job [data-f=address]');i&&i.focus()},50);break;
  case 'quickadd':addRoom(b.dataset.name);break;
  case 'addcustom':addCustom(b);break;
   case 'othershow':{const box=b.closest('.picker').querySelector('.cother');box.hidden=false;b.classList.add('on');b.setAttribute('aria-expanded','true');const i=box.querySelector('.cname');i.focus();setTimeout(()=>keepInView(i),320);break}
@@ -677,14 +718,17 @@ $('#importFile').addEventListener('change',async e=>{
 
 /* ---------- export / print / upload ---------- */
 function exportPayload(){
- const {jobCollapsed,generalCollapsed,...rest}=S;
- return {schema:SCHEMA,exportedAt:new Date().toISOString(),app:'Grandview Walkthrough (trial v5)',
+ const {jobCollapsed,generalCollapsed,jobPicking,jobTyping,...rest}=S;
+ return {schema:SCHEMA,exportedAt:new Date().toISOString(),app:'Grandview Walkthrough (trial v6)',
+  job:{address:(S.job.address||'').trim()||null,customerName:S.job.name||null,phone:S.job.phone||null,paintscoutEstimate:S.job.estimate||null,appointment:S.job.when||null,source:S.job.source==='link'?'link':'manual'},
   walkthrough:Object.assign({},rest,{rooms:S.rooms.map(r=>{const {collapsed,ui,...x}=r,c=JSON.parse(JSON.stringify(x));
    c.productSheen.bySurface=Object.fromEntries(Object.entries(c.productSheen.bySurface||{}).map(([k,o])=>[k,{product:(o.product||'').trim(),sheen:o.sheen||''}]).filter(([,o])=>o.product||o.sheen));
    return Object.assign(c,{productSheenEffective:psEffective(r),derived:derive(r)})})})};
 }
-function fileName(){const c=(S.job.customer||'walkthrough').replace(/[^\w\-]+/g,'-').replace(/^-|-$/g,'');return `grandview-${c}-${S.job.date||today()}.json`}
+function fileName(){const c=((S.job.address||'').split(',')[0].trim()||'walkthrough').replace(/[^\w\-]+/g,'-').replace(/^-|-$/g,'');return `grandview-${c}-${S.job.date||today()}.json`}
 async function exportJSON(){
+ if(!(S.job.address||'').trim()&&!confirm('No job address yet. Add it at the top so this matches the right PaintScout job.\n\nExport anyway?'))return;
+ rememberAddr(S.job.address);
  const json=JSON.stringify(exportPayload(),null,2),name=fileName();
  try{const file=new File([json],name,{type:'application/json'});
   if(navigator.canShare&&navigator.canShare({files:[file]})&&matchMedia('(pointer:coarse)').matches){await navigator.share({files:[file],title:name});return}
@@ -694,7 +738,7 @@ async function exportJSON(){
 }
 function renderPrint(){
  const J=S.job,logo=$('#logo').src,c=(on,l)=>`<span class="c${on?' on':''}">${esc(l)}</span>`,u=v=>`<span class="u">${esc(v)}&nbsp;</span>`,note=v=>`<div class="pnote">${esc(v)}</div>`;
- const jobPg=`<div class="pg"><div class="ph"><img src="${logo}"><div class="pc"><div class="ptitle" style="margin:0">Interior Walkthrough</div>${esc(J.customer)}<br><span style="font-weight:400">${esc([J.address,J.phone,J.date].filter(Boolean).join(' · '))}</span></div></div>
+ const jobPg=`<div class="pg"><div class="ph"><img src="${logo}"><div class="pc"><div class="ptitle" style="margin:0">Interior Walkthrough</div>${esc(J.address)}<br><span style="font-weight:400">${esc([J.estimate&&'PaintScout #'+J.estimate,J.date].filter(Boolean).join(' · '))}</span></div></div>
  <div class="pr b">Schedule: ${u(J.schedule)} Default product / sheen: ${u(J.product)}</div>
  <div class="pr b">Removes art: ${c(J.removesArt==='customer','Customer')}${c(J.removesArt==='grandview','Grandview')} &nbsp; Moves furniture: ${c(J.movesFurniture==='customer','Customer')}${c(J.movesFurniture==='grandview','Grandview')}</div>
  <div class="ps" style="margin-top:10px">General notes</div>${note(S.general.notes)}
@@ -762,7 +806,18 @@ document.addEventListener('focusout',()=>setTimeout(kbCheck,60));
 if(window.visualViewport){ visualViewport.addEventListener('resize',()=>{kbCheck(); if(editable(document.activeElement)) keepInView(document.activeElement)}) }
 
 /* ---------- boot ---------- */
-openDoc(localStorage.getItem(K_CUR));
+function linkFromUrl(first){
+ const parse=str=>{const o={};(str||'').replace(/^[#?]/,'').split('&').forEach(kv=>{if(!kv)return;const i=kv.indexOf('='),k=decodeURIComponent((i<0?kv:kv.slice(0,i)).replace(/\+/g,' ')).trim().toLowerCase();let v='';try{v=decodeURIComponent((i<0?'':kv.slice(i+1)).replace(/\+/g,' '))}catch(e){v=i<0?'':kv.slice(i+1)}o[k]=v.trim()});return o};
+ const q=parse(location.search),h=parse(location.hash),g=k=>(h[k]!=null&&h[k]!==''?h[k]:(q[k]||''));
+ const j={address:g('address'),name:g('name'),phone:g('phone'),estimate:(g('estimate')||g('job')).replace(/^\s*#\s*/,'').trim(),when:g('when')};
+ if(!j.address&&!j.estimate&&!j.name){if(first)openDoc(localStorage.getItem(K_CUR));return}
+ history.replaceState(null,'',location.pathname);
+ saveUpcoming(j);
+ const docs=Object.values(readIndex()).map(m=>loadDoc(m.id)).filter(Boolean);
+ const hit=docs.find(d=>d.job&&(j.estimate?d.job.estimate===j.estimate:(j.address&&(d.job.address||'').toLowerCase()===j.address.toLowerCase())));
+ openDoc(hit?hit.id:null); applyJob(Object.assign({},S.job,Object.fromEntries(Object.entries(j).filter(([,v])=>v))),'link');
+ toast('Linked to '+(j.address||'PaintScout #'+j.estimate))}
+linkFromUrl(true); addEventListener('hashchange',()=>linkFromUrl(false));
 if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{});
 if('serviceWorker' in navigator&&location.protocol!=='file:') navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
