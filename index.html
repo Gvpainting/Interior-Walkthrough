@@ -72,6 +72,11 @@ textarea.field{resize:none;min-height:48px;line-height:1.4;display:block;overflo
 .chip.on{background:var(--accent);color:#fff}
 .chip.sm{min-height:44px;padding:0 13px;font-size:15px}
 .chip.add{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.chip.other{background:#fff;border:2px dashed var(--accent);color:var(--accent);font-weight:600}
+.chip.other.on{background:var(--accent-soft);color:var(--accent);border-style:solid}
+.cother{display:flex;gap:10px;margin-top:14px;align-items:stretch}.cother[hidden]{display:none}
+.cother .field{flex:1 1 auto;min-width:0;font-size:17px}.cother .btn{flex:0 0 auto;min-width:76px}
+.cother.shake{animation:shake .3s}@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 
 /* segmented */
 .seg{display:flex;background:var(--fill);border-radius:12px;padding:3px;gap:3px}
@@ -446,8 +451,17 @@ function reviewCard(){
  ${S.extras.length?`<div class="csub" style="margin:10px 0 0">Extras: ${S.extras.length} item${S.extras.length>1?'s':''}${priced.length?' · $'+priced.reduce((a,x)=>a+x.price,0).toLocaleString()+' priced':''}${quote?' · '+quote+' need a quote':''}</div>`:''}
  <div class="actions" style="margin-top:16px"><button class="btn primary" data-act="export">Export</button><button class="btn" data-act="print">Print / PDF</button><button class="btn" data-act="upload">Upload</button></div></div></section>`;
 }
+function roomPicker(center){
+ return `<div class="picker"><div class="chips"${center?' style="justify-content:center"':''}>${SUGGEST.map(n=>`<button class="chip" data-act="quickadd" data-name="${n}">${n}</button>`).join('')}<button class="chip other" data-act="othershow" aria-expanded="false">+ Other room…</button></div>
+ <div class="cother" hidden><input class="field cname" type="text" placeholder="Type or tap the mic to dictate, e.g. Side room" autocomplete="off" autocapitalize="words" autocorrect="on" enterkeyhint="done" aria-label="Custom room name"><button class="btn primary" data-act="addcustom">Add</button></div></div>`;
+}
+function addCustom(from){
+ const box=from.closest('.picker'),inp=box&&box.querySelector('.cname'); if(!inp) return;
+ const v=inp.value.trim(); if(!v){inp.focus();return}
+ addRoom(v);
+}
 function render(){
- const empty=!S.rooms.length?`<section class="card empty"><h2 class="ctitle">Rooms</h2><p>Add the first room to start the walkthrough.</p><div class="chips" style="justify-content:center">${SUGGEST.map(n=>`<button class="chip" data-act="quickadd" data-name="${n}">${n}</button>`).join('')}</div></section>`:'';
+ const empty=!S.rooms.length?`<section class="card empty"><h2 class="ctitle">Rooms</h2><p>Add the first room to start the walkthrough.</p>${roomPicker(true)}</section>`:'';
  $('#app').innerHTML=tipCard()+jobCard()+generalCard()+S.rooms.map(roomCard).join('')+empty+extrasCard()+reviewCard();
  enterId=null;
  document.querySelectorAll('[data-room]').forEach(el=>meta(el.dataset.room));
@@ -486,7 +500,8 @@ document.addEventListener('input',e=>{
  save();
 });
 document.addEventListener('keydown',e=>{
- const t=e.target; if(e.key==='Enter'&&t.tagName==='INPUT'){e.preventDefault(); const r=t.closest('[data-room]');
+ const t=e.target; if(e.key==='Enter'&&t.classList&&t.classList.contains('cname')){e.preventDefault();addCustom(t);return}
+ if(e.key==='Enter'&&t.tagName==='INPUT'){e.preventDefault(); const r=t.closest('[data-room]');
   if(t.dataset.next&&r) r.querySelector(`[data-f="${t.dataset.next}"]`).focus(); else t.blur();}
 });
 // (no select-on-focus: it fights typing on some browsers)
@@ -520,7 +535,8 @@ function act(a,b){
   b.parentNode.querySelector('input').value=v; if(roomEl)meta(roomEl.dataset.room); save(); break}
  case 'addsheet':showAdd();break;
  case 'quickadd':addRoom(b.dataset.name);break;
- case 'addcustom':{const v=$('#customName').value.trim();addRoom(v);break}
+ case 'addcustom':addCustom(b);break;
+  case 'othershow':{const box=b.closest('.picker').querySelector('.cother');box.hidden=false;b.classList.add('on');b.setAttribute('aria-expanded','true');const i=box.querySelector('.cname');i.focus();setTimeout(()=>keepInView(i),320);break}
  case 'openroom':case 'jumproom':{const id=b.dataset.id||roomEl.dataset.room;setActive(id);save();render();scrollToEl('room-'+id);break}
  case 'collapse':case 'done':{r.collapsed=true;save();render();const nx=document.getElementById('room-'+r.id);if(nx)nx.scrollIntoView({block:'nearest',behavior:'smooth'});break}
  case 'dup':{const n=JSON.parse(JSON.stringify(r));n.id=uid();n.name=uniqueName(r.name.replace(/ \d+$/,'')||'');n.patching='';n.notes='';n.outOfOrdinary='';
@@ -554,9 +570,7 @@ function act(a,b){
 function openSheet(html){$('#sheet').innerHTML='<div class="grab"></div>'+html;$('#scrim').classList.add('show');$('#sheet').classList.add('show')}
 function closeSheet(){$('#scrim').classList.remove('show');$('#sheet').classList.remove('show')}
 function showAdd(){
- openSheet(`<h3>Add a room</h3><div class="chips">${SUGGEST.map(n=>`<button class="chip" data-act="quickadd" data-name="${n}">${n}</button>`).join('')}</div>
- <div style="display:flex;gap:10px;margin-top:16px"><input class="field" id="customName" placeholder="Other room name" autocomplete="off" autocapitalize="words"><button class="btn primary" data-act="addcustom">Add</button></div>`);
- $('#customName').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();addRoom(e.target.value.trim())}});
+ openSheet(`<h3>Add a room</h3>${roomPicker(false)}`);
 }
 function showMenu(){
  openSheet(`<h3>Walkthrough</h3>
@@ -586,7 +600,7 @@ $('#importFile').addEventListener('change',async e=>{
 /* ---------- export / print / upload ---------- */
 function exportPayload(){
  const {jobCollapsed,generalCollapsed,...rest}=S;
- return {schema:SCHEMA,exportedAt:new Date().toISOString(),app:'Grandview Walkthrough (trial v3)',
+ return {schema:SCHEMA,exportedAt:new Date().toISOString(),app:'Grandview Walkthrough (trial v4)',
   walkthrough:Object.assign({},rest,{rooms:S.rooms.map(r=>{const {collapsed,ui,...x}=r;return Object.assign(JSON.parse(JSON.stringify(x)),{derived:derive(r)})})})};
 }
 function fileName(){const c=(S.job.customer||'walkthrough').replace(/[^\w\-]+/g,'-').replace(/^-|-$/g,'');return `grandview-${c}-${S.job.date||today()}.json`}

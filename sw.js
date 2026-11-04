@@ -1,6 +1,6 @@
 // Grandview Walkthrough service worker: keeps the app usable with no signal.
 // Bump VERSION whenever index.html changes so iPads pick up the new copy.
-const VERSION = 'gv-walkthrough-v3';
+const VERSION = 'gv-walkthrough-v4';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
