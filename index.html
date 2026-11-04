@@ -96,6 +96,7 @@ textarea.field{resize:none;min-height:48px;line-height:1.4;display:block;overflo
 .linkbtn{color:var(--accent);font-size:16px;font-weight:500;min-height:44px;margin-top:6px}
 .segrow{display:flex;align-items:center;gap:8px;margin-top:8px}
 .segrow .field{text-align:center}
+.segrow.ot .field{text-align:left;min-width:0;flex:1}.segrow.ot .stepper{flex:none}
 .segrow .x{color:var(--faint)}
 .segrow .rm{width:44px;height:44px;border-radius:50%;background:var(--fill);color:var(--sub);flex:none}
 
@@ -284,11 +285,11 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const $=s=>document.querySelector(s);
 
-const LINE=[['doors','Doors'],['windows','Windows'],['fixtures','Fixtures'],['otherLnft','Other (ln ft)']];
+const LINE=[['doors','Doors'],['windows','Windows'],['garageDoors','Garage doors'],['fixtures','Fixtures'],['otherLnft','Other (ln ft)']];
 const CIRCLE=[['fireplace','Fireplace'],['cabinetsCountertop','Cabinets/Countertop'],['sinkShower','Sink/Shower'],['stairs','Stairs'],['accentWall','Accent Wall'],['caulkTrim','Caulk Trim'],['moveFurniture','Move Furniture']];
 const WALL_TEX=['Smooth','Textured','Plaster','Brick'], CEIL_TEX=['Smooth','Textured','Plaster','Popcorn'];
 const PAINT=[['baseboards','Baseboards'],['crown','Crown Moulding'],['stairs','Stairs'],['fireplace','Fireplace'],['shelving','Shelving'],['closets','Closets']];
-const COUNTS=[['windowTrim','Window trim'],['windowFrame','Window frame'],['doorTrim','Door trim'],['doorFrame','Door frame'],['doors','Doors'],['railingLnft','Railing (ln ft)'],['spindles','Spindles']];
+const COUNTS=[['windowTrim','Window trim'],['windowFrame','Window frame'],['doorTrim','Door trim'],['doorFrame','Door frame'],['doors','Doors'],['garageDoors','Garage doors'],['railingLnft','Railing (ln ft)'],['spindles','Spindles']];
 const CAB=[['doors','Doors'],['drawers','Drawers'],['boxFlats','Box flats']];
 const SHEENS=['Flat','Matte','Eggshell','Satin','Semi-Gloss','Gloss'];
 const PROD_GROUPS=[[null,['Duration Interior']],['Upgrade',['Pre-Cat Epoxy','Scuff Tough','Emerald']],['Budget',['Super Paint']]];
@@ -310,7 +311,7 @@ const SURFACES=[
  ['walls','Walls',r=>r.painting.walls],['ceilings','Ceilings',r=>r.painting.ceilings],
  ['baseboards','Baseboards',r=>r.painting.baseboards],['crown','Crown moulding',r=>r.painting.crown],
  ['windowTrim','Window trim',r=>filled(r.counts.windowTrim)],['windowFrame','Window frames',r=>filled(r.counts.windowFrame)],
- ['doorTrim','Door trim',r=>filled(r.counts.doorTrim)],['doorFrame','Door frames',r=>filled(r.counts.doorFrame)],['doors','Doors',r=>filled(r.counts.doors)],
+ ['doorTrim','Door trim',r=>filled(r.counts.doorTrim)],['doorFrame','Door frames',r=>filled(r.counts.doorFrame)],['doors','Doors',r=>filled(r.counts.doors)],['garageDoors','Garage doors',r=>filled(r.counts.garageDoors)],
  ['stairs','Stairs',r=>r.painting.stairs],['railing','Railing',r=>filled(r.counts.railingLnft)],['spindles','Spindles',r=>filled(r.counts.spindles)],
  ['fireplace','Fireplace',r=>r.painting.fireplace],['shelving','Shelving',r=>r.painting.shelving],['closets','Closets',r=>r.painting.closets],
  ['cabinets','Cabinets',r=>r.ui.cabinets||CAB.some(([k])=>filled(r.cabinets[k]))]];
@@ -322,7 +323,7 @@ function blankRoom(name=''){
  return {id:uid(),name,colorMode:'',color:'',length:'',width:'',height:'',
   walls:[{length:'',height:''}],lineCutting:o(LINE),
   circle:Object.fromEntries(CIRCLE.map(([k])=>[k,false])),patching:'',
-  painting:Object.assign({walls:false,wallsTexture:[],ceilings:false,ceilingsTexture:[]},Object.fromEntries(PAINT.map(([k])=>[k,false]))),
+  painting:Object.assign({walls:false,wallsTexture:[],ceilings:false,ceilingsTexture:[],otherTrim:false},Object.fromEntries(PAINT.map(([k])=>[k,false]))),otherTrim:[],
   counts:o(COUNTS),cabinets:o(CAB),notes:'',outOfOrdinary:'',collapsed:false,
   productSheen:{default:{product:'',sheen:''},bySurface:{}},
   ui:{altWalls:false,trim:false,cabinets:false,psEach:false}};
@@ -349,6 +350,7 @@ function migrate(d){
  d.rooms=(d.rooms||[]).map(r=>{const n=Object.assign(blankRoom(),r);
   for(const k of ['lineCutting','circle','painting','counts','cabinets','ui'])n[k]=Object.assign({},b[k],r[k]||{});
   if(!r.ui){n.ui.trim=COUNTS.some(([k])=>filled(n.counts[k]));n.ui.cabinets=CAB.some(([k])=>filled(n.cabinets[k]));n.ui.altWalls=n.walls.some(w=>filled(w.length)||filled(w.height))}
+  if(!Array.isArray(n.otherTrim))n.otherTrim=[];
   if(!Array.isArray(n.walls)||!n.walls.length)n.walls=[{length:'',height:''}];
   // v5: per-room / per-surface product & sheen
   const ps=r.productSheen||{};
@@ -437,7 +439,7 @@ function psLine(r){ // short grouped text, e.g. "Walls: SW Duration satin · Bas
  if(!g.size) return '';
  if(g.size===1&&!hasOverrides(r)) return [...g.keys()][0];
  return [...g].map(([t,ls])=>ls.join(', ')+': '+t).join(' · ')}
-function paintList(r){const P=r.painting;return [P.walls&&('Walls'+(P.wallsTexture.length?' ('+P.wallsTexture.join('/').toLowerCase()+')':'')),P.ceilings&&('Ceilings'+(P.ceilingsTexture.length?' ('+P.ceilingsTexture.join('/').toLowerCase()+')':'')),...PAINT.filter(([k])=>P[k]).map(([,l])=>l)].filter(Boolean)}
+function paintList(r){const P=r.painting;return [P.walls&&('Walls'+(P.wallsTexture.length?' ('+P.wallsTexture.join('/').toLowerCase()+')':'')),P.ceilings&&('Ceilings'+(P.ceilingsTexture.length?' ('+P.ceilingsTexture.join('/').toLowerCase()+')':'')),...PAINT.filter(([k])=>P[k]).map(([,l])=>l),...(P.otherTrim?otFilled(r).map(t=>(t.desc||'Other trim')+(filled(t.lnft)?' '+t.lnft+' LF':'')):[])].filter(Boolean)}
 function openingsStr(r){return LINE.filter(([k])=>filled(r.lineCutting[k])).map(([k,l])=>{const v=r.lineCutting[k];return v+' '+(k==='otherLnft'?'ln ft other':(v===1?l.slice(0,-1):l).toLowerCase())}).join(', ')}
 function roomSummary(r){
  const d=derive(r),a=[];
@@ -506,6 +508,9 @@ function generalCard(){
  <div class="chips gtags">${GTAGS.map(t=>chip('tags',t,G.tags.includes(t),t,'sm')).join('')}</div>
  </div></section>`;
 }
+const otList=r=>r.otherTrim.length?r.otherTrim:[{desc:'',lnft:''}];
+function otherTrimHTML(r){return `<div class="subl">Other trim: what it is and linear feet</div>${otList(r).map((t,j)=>`<div class="segrow ot"><input class="field" data-f="otherTrim.${j}.desc" value="${esc(t.desc)}" placeholder="What is it? e.g. Steel beam" autocomplete="off" aria-label="Other trim description"><span class="stepper"><button data-act="step" data-f="otherTrim.${j}.lnft" data-d="-1" aria-label="Less">−</button><input data-f="otherTrim.${j}.lnft" data-num value="${esc(t.lnft)}" inputmode="decimal" autocomplete="off" aria-label="Linear feet" placeholder="LF"><button data-act="step" data-f="otherTrim.${j}.lnft" data-d="1" aria-label="More">+</button></span>${r.otherTrim.length>1?`<button class="rm" data-act="deltrim" data-j="${j}" aria-label="Remove other trim">×</button>`:''}</div>`).join('')}<button class="linkbtn" data-act="addtrim">+ Add another</button>`}
+const otFilled=r=>(r.otherTrim||[]).filter(t=>(t.desc||'').trim()||filled(t.lnft));
 function roomCard(r,i){
  const enter=enterId===r.id?' enter':'';
  if(r.collapsed){const s=roomSummary(r);
@@ -526,7 +531,8 @@ function roomCard(r,i){
  </div>
  <div class="grp"><h4>Openings<span>line cutting</span></h4><div class="list">${LINE.map(([k,l])=>stepRow('lineCutting.'+k,l,r.lineCutting[k])).join('')}</div></div>
  <div class="grp full"><h4>What we're painting</h4>
-  <div class="chips">${chip('painting.walls','Walls',P.walls)}${chip('painting.ceilings','Ceilings',P.ceilings)}${PAINT.map(([k,l])=>chip('painting.'+k,l,P[k])).join('')}</div>
+  <div class="chips">${chip('painting.walls','Walls',P.walls)}${chip('painting.ceilings','Ceilings',P.ceilings)}${PAINT.map(([k,l])=>chip('painting.'+k,l,P[k])).join('')}${chip('painting.otherTrim','Other trim',P.otherTrim)}</div>
+  ${reveal('painting.otherTrim',otherTrimHTML(r),P.otherTrim)}
   ${reveal('painting.walls',`<div class="subl">Wall finish</div><div class="chips">${WALL_TEX.map(t=>chip('painting.wallsTexture',t,P.wallsTexture.includes(t),t,'sm')).join('')}</div>`,P.walls)}
   ${reveal('painting.ceilings',`<div class="subl">Ceiling finish</div><div class="chips">${CEIL_TEX.map(t=>chip('painting.ceilingsTexture',t,P.ceilingsTexture.includes(t),t,'sm')).join('')}</div>`,P.ceilings)}
   <button class="disc${r.ui.trim?' on':''}" data-chip="ui.trim"><span class="dl">Trim & doors</span><span class="ds" data-trimsum></span><span class="chev">›</span></button>
@@ -690,6 +696,8 @@ function act(a,b){
  case 'dup':{const n=JSON.parse(JSON.stringify(r));n.id=uid();n.name=uniqueName(r.name.replace(/ \d+$/,'')||'');n.patching='';n.notes='';n.outOfOrdinary='';
   S.rooms.splice(S.rooms.indexOf(r)+1,0,n);setActive(n.id);enterId=n.id;save();render();scrollToEl('room-'+n.id);toast('Duplicated. Patching and notes left blank.');break}
  case 'del':{if(confirm(`Delete ${r.name?'"'+r.name+'"':'this room'}? This can't be undone.`)){S.rooms.splice(S.rooms.indexOf(r),1);save();render()}break}
+ case 'addtrim':if(!r.otherTrim.length)r.otherTrim.push({desc:'',lnft:''});r.otherTrim.push({desc:'',lnft:''});save();render();break;
+ case 'deltrim':r.otherTrim.splice(+b.dataset.j,1);save();render();break;
  case 'addwall':r.walls.push({length:'',height:''});save();render();break;
  case 'delwall':r.walls.splice(+b.dataset.j,1);save();render();break;
  case 'addextra':S.extras.push({item:'',price:'',needsQuote:false});save();render();{const l=document.querySelectorAll('#extras [data-f=item]');l[l.length-1].focus({preventScroll:true});scrollToEl('extras')}break;
@@ -748,7 +756,7 @@ $('#importFile').addEventListener('change',async e=>{
 /* ---------- export / print / upload ---------- */
 function exportPayload(){
  const {jobCollapsed,generalCollapsed,jobPicking,jobTyping,...rest}=S;
- return {schema:SCHEMA,exportedAt:new Date().toISOString(),app:'Grandview Walkthrough (trial v6)',
+ return {schema:SCHEMA,exportedAt:new Date().toISOString(),app:'Grandview Walkthrough (v7.1)',
   job:{address:(S.job.address||'').trim()||null,customerName:S.job.name||null,phone:S.job.phone||null,paintscoutEstimate:S.job.estimate||null,appointment:S.job.when||null,source:S.job.source==='link'?'link':'manual'},
   walkthrough:Object.assign({},rest,{rooms:S.rooms.map(r=>{const {collapsed,ui,...x}=r,c=JSON.parse(JSON.stringify(x));
    c.productSheen.bySurface=Object.fromEntries(Object.entries(c.productSheen.bySurface||{}).map(([k,o])=>[k,{product:(o.product||'').trim(),sheen:o.sheen||''}]).filter(([,o])=>o.product||o.sheen));
@@ -785,6 +793,7 @@ function renderPrint(){
   <div class="pl">${c(P.walls,'Walls')} - (${WALL_TEX.map(t=>c(P.wallsTexture.includes(t),t)).join(', ')})</div>
   <div class="pl">${c(P.ceilings,'Ceilings')} - (${CEIL_TEX.map(t=>c(P.ceilingsTexture.includes(t),t)).join(', ')})</div>
   ${PAINT.map(([k,l])=>`<div class="pl">${c(P[k],l)}</div>`).join('')}
+  <div class="pl">${c(P.otherTrim,'Other trim')}</div>${(P.otherTrim?otFilled(r):[]).map(t=>`<div class="pl" style="padding-left:14px">${u(t.desc)} Ln Ft: ${u(t.lnft)}</div>`).join('')}
   ${(()=>{const E=psEffective(r),ks=Object.keys(E),d=roomDefault(r);return `<div class="ps" style="margin-top:8px">Product & sheen:</div>`+(ks.length?ks.map(k=>`<div class="pl">${esc(E[k].surface)}: ${u(psTxt(E[k]))}</div>`).join(''):`<div class="pl">Room: ${u(psTxt(d))}</div>`)})()}</div>
   <div style="padding-top:16px">${COUNTS.map(([k,l])=>`<div class="pl">${esc(l)}: ${k==='railingLnft'?'Ln Ft':'#'}${u(r.counts[k])}</div>`).join('')}</div></div>
  <div class="p2"><div>${c(r.ui.cabinets||CAB.some(([k])=>filled(r.cabinets[k])),'Cabinets')}${CAB.map(([k,l])=>`<div class="pl" style="padding-left:14px"># ${l}: ${esc(r.cabinets[k])}</div>`).join('')}</div><div><b>Additional Notes:</b>${note(r.notes)}</div></div></div>`};
