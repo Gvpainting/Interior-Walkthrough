@@ -121,6 +121,8 @@ textarea.field{resize:none;min-height:48px;line-height:1.4;display:block;overflo
 .pss .pshint{font-size:13px;color:var(--sub);margin:8px 2px 0}
 .pss .field{background:#fff}
 .pss .chips{margin-top:6px}
+.psel{display:block;width:100%;min-height:50px;padding:0 44px 0 14px;font:inherit;font-size:17px;color:inherit;background:var(--fill) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9'%3E%3Cpath d='M1 1l6 6 6-6' fill='none' stroke='%232f5f9e' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 16px center;border:0;border-radius:12px;-webkit-appearance:none;appearance:none;margin-bottom:6px;text-overflow:ellipsis;white-space:nowrap}
+.psel:focus{outline:2px solid var(--accent);outline-offset:1px}
 .pick{display:flex;flex-direction:column;gap:6px;margin-bottom:6px}.pglab{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;opacity:.55;margin:8px 0 2px}.pgrp .pglab{margin-top:4px}.pick .chip{white-space:normal;text-align:left}.pother{margin-top:4px}.psrbody{flex-basis:100%;min-width:0}
 .pss .switchrow{margin-top:12px;gap:10px}.pss .switchrow .dl{font-size:16px}
 .pslist{display:flex;flex-direction:column;gap:12px;margin-top:6px}
@@ -292,14 +294,16 @@ const PAINT=[['baseboards','Baseboards'],['crown','Crown Moulding'],['stairs','S
 const COUNTS=[['windowTrim','Window trim'],['windowFrame','Window frame'],['doorTrim','Door trim'],['doorFrame','Door frame'],['doors','Doors'],['garageDoors','Garage doors'],['railingLnft','Railing (ln ft)'],['spindles','Spindles']];
 const CAB=[['doors','Doors'],['drawers','Drawers'],['boxFlats','Box flats']];
 const SHEENS=['Flat','Matte','Eggshell','Satin','Semi-Gloss','Gloss'];
-const PROD_GROUPS=[[null,['Duration Interior']],['Upgrade',['Pre-Cat Epoxy','Scuff Tough','Emerald']],['Budget',['Super Paint']]];
-const PROD_OPTS=PROD_GROUPS.flatMap(g=>g[1]);
-const DEF_PRODUCT='Duration Interior',DEF_SHEEN='Satin';
+// Paint product: one dropdown. Stored/exported value -> on-screen label. "Standard" is Duration Interior.
+const PRODUCTS_SEL=[['Standard (Duration Interior)','Standard'],['Upgrade - Pre-Cat Epoxy','Upgrade - Pre-Cat Epoxy'],['Upgrade - Scuff Tough','Upgrade - Scuff Tough']];
+const PROD_OPTS=PRODUCTS_SEL.map(o=>o[0]);
+const prodLabel=v=>(PRODUCTS_SEL.find(o=>o[0]===v)||[,v])[1];
+const DEF_PRODUCT='Standard (Duration Interior)',DEF_SHEEN='Satin';
 function mapProd(t){t=(t||'').trim();if(!t)return '';const ex=PROD_OPTS.find(o=>o.toLowerCase()===t.toLowerCase());if(ex)return ex;
  const l=t.toLowerCase().replace(/[^a-z]/g,'');
- if(l.includes('duration')||l.includes('standard'))return 'Duration Interior';
- if(l.includes('precat')||l.includes('epoxy'))return 'Pre-Cat Epoxy';
- if(l.includes('scufftough'))return 'Scuff Tough';
+ if(l.includes('precat')||l.includes('epoxy'))return 'Upgrade - Pre-Cat Epoxy';
+ if(l.includes('scufftough'))return 'Upgrade - Scuff Tough';
+ if(l.includes('duration')||l==='standard'||l.startsWith('standard'))return 'Standard (Duration Interior)';
  if(l.includes('superpaint'))return 'Super Paint';
  if(l.includes('emerald')&&!l.includes('urethane'))return 'Emerald';
  return t}
@@ -423,6 +427,9 @@ function roomDefault(r){const D=r.productSheen.default,p=(D.product||'').trim(),
  if(p||D.sheen) return {product:p||j,sheen:D.sheen||js,source:'room'};
  return {product:j,sheen:js,source:(j||js)?'job':'none'}}
 const OTHER=new Set();
+// Legacy values (Emerald, Super Paint, typed text) stay visible as an extra "(saved)" option; they aren't offered otherwise.
+function prodSelect(path,val,inherit){const known=PROD_OPTS.includes(val);
+ return `<select class="psel" data-sel="${path}" aria-label="Paint">${inherit?`<option value=""${!val?' selected':''}>${esc(inherit)}</option>`:(!val?'<option value="" selected>Choose paint…</option>':'')}${PRODUCTS_SEL.map(([v,l])=>`<option value="${esc(v)}"${val===v?' selected':''}>${esc(l)}</option>`).join('')}${val&&!known?`<option value="${esc(val)}" selected>${esc(val)} (saved)</option>`:''}</select>`}
 function pickHTML(k,path,val,groups,inherit){const opts=groups.flatMap(g=>g[1]),oth=(val&&!opts.includes(val))||OTHER.has(k+path);
  const btn=(v,l,on,a='pick')=>`<button type="button" class="chip sm${on?' on':''}" data-act="${a}" data-p="${path}" data-v="${esc(v)}" aria-pressed="${!!on}">${esc(l)}</button>`;
  return `<div class="pick" data-pick="${path}">${inherit?`<div class="chips">${btn('',inherit,!val&&!oth)}</div>`:''}
@@ -488,7 +495,7 @@ function jobCard(){
 ${jobHead(J)}
   <label class="half"><span class="flabel">Walkthrough date</span>${field('date',J.date,'','type="date"')}</label>
   <label class="half"><span class="flabel">Schedule</span>${field('schedule',J.schedule,'e.g. Early December')}</label>
-  <div class="full"><span class="flabel">Paint (job default)</span>${pickHTML('job:','product',J.product,PROD_GROUPS,null)}</div>
+  <div class="full"><span class="flabel">Paint (job default)</span>${prodSelect('product',J.product,null)}</div>
   <div class="full"><span class="flabel">Sheen (job default)</span>${pickHTML('job:','sheen',J.sheen,[[null,SHEENS]],null)}</div>
   <div class="full half"><span class="flabel">Who removes art & hangings?</span>${seg('removesArt')}</div>
   <div class="full half"><span class="flabel">Who moves furniture?</span>${seg('movesFurniture')}</div>
@@ -549,7 +556,7 @@ function roomCard(r,i){
 }
 function psBlock(r){const D=r.productSheen.default,j=(S.job.product||'').trim(),js=S.job.sheen||'',k=r.id+':';
  return `<div class="pss" data-ps><div class="pshead">Product & sheen</div>
- <div class="pglab">Paint</div>${pickHTML(k,'productSheen.default.product',D.product,PROD_GROUPS,'Same as job'+(j?' ('+j+')':''))}
+ <div class="pglab">Paint</div>${prodSelect('productSheen.default.product',D.product,'Same as job'+(j?' ('+prodLabel(j)+')':''))}
  <div class="pglab">Sheen</div>${pickHTML(k,'productSheen.default.sheen',D.sheen,[[null,SHEENS]],'Same as job'+(js?' ('+js+')':''))}
  <div data-pslist>${psListHTML(r)}</div></div>`}
 function psListHTML(r){const sel=selSurfaces(r),d=roomDefault(r),dt=psTxt(d)||'nothing set';
@@ -559,7 +566,7 @@ function psListHTML(r){const sel=selSurfaces(r),d=roomDefault(r),dt=psTxt(d)||'n
  ${sel.length>1||r.ui.psEach?`<button class="switchrow${r.ui.psEach?' on':''}" data-chip="ui.psEach" role="switch" aria-checked="${!!r.ui.psEach}"><span class="dl">Different for each surface</span><span class="sw"></span></button>`:''}
  ${reveal('ui.psEach',`<div class="pslist">${sel.map(([k,l])=>{const o=ovOf(r,k),ov=!!(o.product||o.sheen);
   return `<div class="psrow${ov?' ov':''}" data-psrow="${k}"><div class="psl">${esc(l)}<small data-pseff>${ov?'':'Same as room'}</small></div>
-   <div class="psrbody"><div class="pglab">Paint</div>${pickHTML(r.id+':','productSheen.bySurface.'+k+'.product',o.product,PROD_GROUPS,'Same as room'+(d.product?' ('+d.product+')':''))}
+   <div class="psrbody"><div class="pglab">Paint</div>${prodSelect('productSheen.bySurface.'+k+'.product',o.product,'Same as room'+(d.product?' ('+prodLabel(d.product)+')':''))}
    <div class="pglab">Sheen</div>${pickHTML(r.id+':','productSheen.bySurface.'+k+'.sheen',o.sheen,[[null,SHEENS]],'Same as room'+(d.sheen?' ('+d.sheen+')':''))}</div></div>`}).join('')}</div>`,r.ui.psEach)}`}
 function psSync(el,r){ // keep the per-surface list in step with what's selected, without stealing focus while typing
  const box=el.querySelector('[data-pslist]'); if(!box) return;
@@ -631,6 +638,8 @@ function sync(scope,o){
 }
 
 /* ---------- events ---------- */
+document.addEventListener('change',e=>{const t=e.target;if(!t.matches||!t.matches('select[data-sel]'))return;
+ const o=ctx(t);setP(o,t.dataset.sel,t.value);save();const y=scrollY;render();scrollTo(0,y)});
 document.addEventListener('focusout',e=>{const t=e.target;if(t&&t.dataset&&t.dataset.f==='address'&&t.closest('[data-scope=job]'))rememberAddr(t.value)});
 document.addEventListener('input',e=>{
  const t=e.target; if(!t.dataset||!t.dataset.f||!S) return;
@@ -756,7 +765,7 @@ $('#importFile').addEventListener('change',async e=>{
 /* ---------- export / print / upload ---------- */
 function exportPayload(){
  const {jobCollapsed,generalCollapsed,jobPicking,jobTyping,...rest}=S;
- return {schema:SCHEMA,exportedAt:new Date().toISOString(),app:'Grandview Walkthrough (v7.1)',
+ return {schema:SCHEMA,exportedAt:new Date().toISOString(),app:'Grandview Walkthrough (v7.2)',
   job:{address:(S.job.address||'').trim()||null,customerName:S.job.name||null,phone:S.job.phone||null,paintscoutEstimate:S.job.estimate||null,appointment:S.job.when||null,source:S.job.source==='link'?'link':'manual'},
   walkthrough:Object.assign({},rest,{rooms:S.rooms.map(r=>{const {collapsed,ui,...x}=r,c=JSON.parse(JSON.stringify(x));
    c.productSheen.bySurface=Object.fromEntries(Object.entries(c.productSheen.bySurface||{}).map(([k,o])=>[k,{product:(o.product||'').trim(),sheen:o.sheen||''}]).filter(([,o])=>o.product||o.sheen));
