@@ -150,6 +150,8 @@ select.field{padding-right:30px;background-image:linear-gradient(45deg,transpare
 
 /* room card */
 .rhead{display:flex;align-items:center;gap:12px;padding:16px 14px 6px 18px}
+.ubadge{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:600;background:var(--fill);color:var(--sub);vertical-align:2px}.ubadge.ok{background:#e3f5e8;color:#1e7a3c}.ubadge.pend{background:#fff3d6;color:#8a5a00}
+.btn.finish{flex:1;min-height:52px;font-size:17px}
 .badge{flex:none;width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;display:grid;place-items:center;font-size:14px;font-weight:700}
 .rtitle{flex:1;min-width:0;border:0;background:transparent;font-size:24px;font-weight:700;letter-spacing:-.01em;outline:none;padding:4px 0}
 .rtitle::placeholder{color:var(--faint)}
@@ -389,12 +391,13 @@ function migrate(d){
 function readIndex(){try{return JSON.parse(localStorage.getItem(K_INDEX))||{}}catch(e){return{}}}
 function loadDoc(id){try{return JSON.parse(localStorage.getItem(K_PRE+id))}catch(e){return null}}
 let S=null,lastSave=0,enterId=null;
+function ixEntry(d){return {id:d.id,customer:(d.job&&d.job.address)||'',address:'',date:d.job&&d.job.date,rooms:(d.rooms||[]).length,updated:d.updated,uploadedAt:d.uploadedAt||null,finished:!!d.finishedAt,pendingUpload:!!d.pendingUpload}}
 function save(){
  S.updated=Date.now();
  try{
   localStorage.setItem(K_PRE+S.id,JSON.stringify(S));
   const ix=readIndex();
-  ix[S.id]={id:S.id,customer:jobLabel(),address:'',date:S.job.date,rooms:S.rooms.length,updated:S.updated,uploadedAt:S.uploadedAt};
+  ix[S.id]=ixEntry(S);
   localStorage.setItem(K_INDEX,JSON.stringify(ix)); localStorage.setItem(K_CUR,S.id);
   lastSave=S.updated; showSaved(true);
  }catch(e){toast('Could not save on this device ('+e.name+'). Export now.',6000)}
@@ -608,7 +611,9 @@ function reviewCard(){
  ${genLine()?`<button class="rv" data-act="genopen"><span class="badge dim">N</span><span class="mt"><b>General notes</b><small class="clamp">${esc(genLine())}</small>${S.general.colors?`<small>Colors: ${esc(S.general.colors)}</small>`:''}</span><span class="chev">›</span></button>`:''}
  ${S.rooms.map((r,i)=>{const s=roomSummary(r);return `<button class="rv" data-act="jumproom" data-id="${r.id}"><span class="badge dim">${i+1}</span><span class="mt"><b>${esc(r.name||'Untitled room')}</b><small>${esc(s.l1)}</small>${s.l2?`<small>${esc(s.l2)}</small>`:''}${s.l3?`<small>${esc(s.l3)}</small>`:''}</span><span class="chev">›</span></button>`}).join('')}
  ${S.extras.length?`<div class="csub" style="margin:10px 0 0">Extras: ${S.extras.length} item${S.extras.length>1?'s':''}${priced.length?' · $'+priced.reduce((a,x)=>a+x.price,0).toLocaleString()+' priced':''}${quote?' · '+quote+' need a quote':''}</div>`:''}
- <div class="actions" style="margin-top:16px"><button class="btn primary" data-act="export">Export</button><button class="btn" data-act="print">Print / PDF</button><button class="btn" data-act="upload">Upload</button></div></div></section>`;
+ <div class="actions" style="margin-top:16px"><button class="btn primary finish" data-act="finish">${S.uploadedAt&&!S.pendingUpload&&S.uploadedAt>=S.updated-2000?'Uploaded ✓ · Upload again':S.pendingUpload?'Waiting to upload… · Try now':'Finish &amp; upload'}</button></div>
+ <div class="csub" style="margin-top:8px">${uploadLine(S)}</div>
+ <div class="actions" style="margin-top:10px"><button class="btn" data-act="export">Export</button><button class="btn" data-act="print">Print / PDF</button></div></div></section>`;
 }
 function roomPicker(center){
  return `<div class="picker"><div class="chips"${center?' style="justify-content:center"':''}>${SUGGEST.map(n=>`<button class="chip" data-act="quickadd" data-name="${n}">${n}</button>`).join('')}<button class="chip other" data-act="othershow" aria-expanded="false">+ Other room…</button></div>
@@ -738,7 +743,7 @@ function act(a,b){
  case 'savesettings':saveSettings();break;
  case 'export':closeSheet();exportJSON();break;
  case 'print':closeSheet();doPrint();break;
- case 'upload':closeSheet();doUpload();break;
+ case 'upload':case 'finish':closeSheet();finishAndUpload();break;
  case 'list':showList();break;
  case 'collapseall':S.rooms.forEach(x=>x.collapsed=true);save();render();closeSheet();break;
  case 'new':S=blankWalkthrough();save();render();closeSheet();window.scrollTo(0,0);toast('New walkthrough started');break;
@@ -762,12 +767,12 @@ function showMenu(){
  <button class="menuitem" data-act="export">Export (JSON file)</button>
  <button class="menuitem" data-act="print">Print / save as PDF</button>
  <button class="menuitem" data-act="collapseall">Collapse all rooms</button>
- <button class="menuitem" data-act="upload">Upload<small>not set up yet</small></button>`);
+ <button class="menuitem" data-act="finish">Finish &amp; upload<small>${UPLOAD_ENDPOINT?uploadLine(S):'not set up yet'}</small></button>`);
 }
 function showList(){
  const ix=Object.values(readIndex()).sort((a,b)=>b.updated-a.updated);
  openSheet(`<h3>Walkthroughs</h3>
- ${ix.map(m=>`<div class="wt${m.id===S.id?' cur':''}"><div class="mt"><b>${esc(m.customer||'Untitled')}</b><small>${esc([m.address,m.rooms+' room'+(m.rooms===1?'':'s'),'edited '+new Date(m.updated).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})].filter(Boolean).join(' · '))}</small></div>
+ ${ix.map(m=>`<div class="wt${m.id===S.id?' cur':''}"><div class="mt"><b>${esc(m.customer||'Untitled')}</b>${m.uploadedAt&&!m.pendingUpload?'<span class="ubadge ok">Uploaded</span>':m.pendingUpload?'<span class="ubadge pend">Pending upload</span>':m.finished?'<span class="ubadge">Finished</span>':''}<small>${esc([m.address,m.rooms+' room'+(m.rooms===1?'':'s'),'edited '+new Date(m.updated).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})].filter(Boolean).join(' · '))}</small></div>
   <button class="btn" data-act="open" data-id="${m.id}">Open</button><button class="btn danger" data-act="deldoc" data-id="${m.id}" aria-label="Delete">Delete</button></div>`).join('')}
  <div class="actions" style="margin-top:14px"><button class="btn primary" data-act="new">New walkthrough</button><button class="btn" data-act="import">Import file</button></div>
  <p class="csub" style="margin-top:12px">Saved on this device until exported or uploaded. Use it from the Home Screen so iPadOS keeps the data.</p>`);
@@ -864,7 +869,7 @@ async function saveSettings(){
 /* ---------- export / print / upload ---------- */
 function exportPayload(){
  const {jobCollapsed,generalCollapsed,jobPicking,jobTyping,...rest}=S;
- return {schema:SCHEMA,exportedAt:new Date().toISOString(),app:'Grandview Walkthrough (v7.3)',
+ return {schema:SCHEMA,exportedAt:new Date().toISOString(),app:'Grandview Walkthrough (v8)',
   job:{address:(S.job.address||'').trim()||null,standardProduct:stdName(),customerName:S.job.name||null,phone:S.job.phone||null,paintscoutEstimate:S.job.estimate||null,appointment:S.job.when||null,source:S.job.source==='link'?'link':'manual'},
   walkthrough:Object.assign({},rest,{rooms:S.rooms.map(r=>{const {collapsed,ui,...x}=r,c=JSON.parse(JSON.stringify(x));
    c.productSheen.bySurface=Object.fromEntries(Object.entries(c.productSheen.bySurface||{}).map(([k,o])=>[k,{product:(o.product||'').trim(),sheen:o.sheen||''}]).filter(([,o])=>o.product||o.sheen));
@@ -910,21 +915,64 @@ function renderPrint(){
 }
 function doPrint(){renderPrint();setTimeout(()=>window.print(),50)}
 window.addEventListener('beforeprint',renderPrint);
-/* TODO(upload): no backend yet. When one is chosen (e.g. a Google Apps Script web app writing to a
-   Drive folder/Sheet, or a small HTTPS endpoint), set UPLOAD_ENDPOINT and POST exportPayload() there.
-   The pendingUpload flag lets walkthroughs finished offline upload on the next 'online' event.
-   Nothing leaves the device until this is wired up. */
-const UPLOAD_ENDPOINT='';
+/* ---------- upload: Google Apps Script web app (see /walkthrough-backend) ----------
+   UPLOAD_ENDPOINT / UPLOAD_TOKEN are filled in at build time from upload-config.json.
+   Until then the placeholders stay and Upload shows "not set up yet". */
+const _cfg=v=>/^__.*__$/.test(v)?'':v;
+const UPLOAD_ENDPOINT=_cfg('https://script.google.com/macros/s/AKfycbyhG2mkF0_hzyh6RvsRcSGj__D-ogeNWDiPT5fUtMSKe326pqzO5P-WM9MDYL8KOHAyLw/exec'), UPLOAD_TOKEN=_cfg('OjEIsObtft2DrbsNXUQzf6cBo59bpweH');
+function uploadLine(d){if(!UPLOAD_ENDPOINT)return 'Upload is not set up yet. Use Export for now.';
+ if(d.pendingUpload)return 'Saved on this iPad. Uploads automatically when you’re back online.';
+ if(d.uploadedAt)return 'Uploaded to Drive '+new Date(d.uploadedAt).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+ return 'Saves this walkthrough to the Grandview Walkthroughs folder in Google Drive.'}
 async function uploadWalkthrough(payload){
  if(!UPLOAD_ENDPOINT) throw new Error('not-configured');
- const res=await fetch(UPLOAD_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+ if(!navigator.onLine) throw new Error('offline');
+ // text/plain keeps this a "simple" request, so the browser sends no CORS preflight (Apps Script can't answer one).
+ const res=await fetch(UPLOAD_ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({token:UPLOAD_TOKEN,payload}),redirect:'follow'});
  if(!res.ok) throw new Error('HTTP '+res.status);
+ const j=await res.json().catch(()=>null); if(!j||!j.ok) throw new Error((j&&j.error)||'bad-response');
+ return j;
 }
-async function doUpload(){
- try{await uploadWalkthrough(exportPayload());S.uploadedAt=Date.now();S.pendingUpload=false;save();toast('Uploaded')}
- catch(e){if(e.message==='not-configured')toast("Upload isn't set up yet in this trial. Use Export for now.",4000);else{S.pendingUpload=true;save();toast("Offline. It'll upload when you're back online.")}}
+function payloadFor(d){const keep=S;try{S=d;return exportPayload()}finally{S=keep}}
+function storeDoc(d){localStorage.setItem(K_PRE+d.id,JSON.stringify(d));const ix=readIndex();ix[d.id]=ixEntry(d);localStorage.setItem(K_INDEX,JSON.stringify(ix))}
+async function uploadOne(d){ // d may be S or a stored doc
+ const ver=d.updated;
+ try{const j=await uploadWalkthrough(payloadFor(d));
+  const tgt=(S&&S.id===d.id)?S:d; tgt.uploadedAt=Date.now(); tgt.driveFileId=j.fileId||tgt.driveFileId||null; if(tgt.updated===ver)tgt.pendingUpload=false; storeDoc(tgt); return true}
+ catch(e){if(e.message==='not-configured')throw e; const tgt=(S&&S.id===d.id)?S:d; tgt.pendingUpload=true; storeDoc(tgt); return false}
 }
-window.addEventListener('online',()=>{showSaved();if(S&&S.pendingUpload&&UPLOAD_ENDPOINT)doUpload()});
+async function finishAndUpload(){
+ S.finishedAt=S.finishedAt||Date.now();
+ if(!UPLOAD_ENDPOINT){save();render();toast("Marked finished. Upload isn't set up yet. Use Export for now.",4000);return}
+ S.pendingUpload=true; save();
+ const ok=await uploadOne(S); render();
+ toast(ok?'Uploaded to Google Drive':"No connection. It'll upload automatically when you're back online.",3500);
+ if(ok) retryPending();
+}
+let retrying=false;
+async function retryPending(){
+ if(!UPLOAD_ENDPOINT||!navigator.onLine||retrying) return; retrying=true; let n=0;
+ try{for(const m of Object.values(readIndex())){if(!m.pendingUpload)continue;
+  const d=(S&&S.id===m.id)?S:loadDoc(m.id); if(!d)continue; if(d!==S)migrate(d);
+  if(await uploadOne(d))n++; else break}}
+ finally{retrying=false}
+ if(n){toast(n===1?'Uploaded 1 walkthrough':'Uploaded '+n+' walkthroughs');if($('#review'))render()}
+}
+/* shared settings (standard paint) via the same Apps Script web app */
+if(UPLOAD_ENDPOINT) settingsRemote={
+ async push(o){try{if(!navigator.onLine)throw 0;
+   const res=await fetch(UPLOAD_ENDPOINT,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({type:'settings',token:UPLOAD_TOKEN,settings:{standardProduct:o.standardProduct}})});
+   const j=await res.json();if(!j.ok)throw 0;
+   const cur=settings();if(cur.updatedAt===o.updatedAt)storeSettings({standardProduct:j.standardProduct||o.standardProduct,updatedAt:j.updatedAt||o.updatedAt,pendingSync:false});return true}
+  catch(e){const cur=settings();if(cur.updatedAt===o.updatedAt)storeSettings(Object.assign(cur,{pendingSync:true}));return false}},
+ async pull(){if(!navigator.onLine)return;const loc=settings();
+  if(loc.pendingSync){await this.push(loc);return}
+  try{const res=await fetch(UPLOAD_ENDPOINT+(UPLOAD_ENDPOINT.includes('?')?'&':'?')+'action=settings',{cache:'no-store'});const j=await res.json();
+   if(j&&j.ok&&j.standardProduct&&j.updatedAt>=(loc.updatedAt||0)&&!settings().pendingSync)storeSettings({standardProduct:j.standardProduct,updatedAt:j.updatedAt,pendingSync:false})}catch(e){}}
+};
+function syncSettings(){if(settingsRemote)settingsRemote.pull()}
+window.addEventListener('online',()=>{showSaved();syncSettings();retryPending()});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')retryPending()});
 window.addEventListener('offline',()=>showSaved());
 function toast(m,ms=2600){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove('show'),ms)}
 
@@ -965,6 +1013,7 @@ function linkFromUrl(first){
  openDoc(hit?hit.id:null); applyJob(Object.assign({},S.job,Object.fromEntries(Object.entries(j).filter(([,v])=>v))),'link');
  toast('Linked to '+(j.address||'PaintScout #'+j.estimate))}
 linkFromUrl(true); addEventListener('hashchange',()=>linkFromUrl(false));
+syncSettings();setTimeout(retryPending,1500);
 if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{});
 if('serviceWorker' in navigator&&location.protocol!=='file:') navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
