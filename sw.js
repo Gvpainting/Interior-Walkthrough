@@ -1,6 +1,6 @@
 // Grandview Walkthrough service worker: keeps the app usable with no signal.
 // Bump VERSION whenever index.html changes so iPads pick up the new copy.
-const VERSION = 'gv-walkthrough-v8';
+const VERSION = 'gv-walkthrough-v9';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -14,7 +14,10 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const req = e.request;
   // Only same-origin GETs are cached. Address lookups (photon.komoot.io / Google) and uploads always go to the network.
-  if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
+  const url = new URL(req.url);
+  if (req.method !== 'GET' || url.origin !== location.origin) return;
+  // Only the app page itself is stored as the offline copy (v9: never some other page on the same site).
+  if (req.mode === 'navigate' && !/\/(index\.html)?$/.test(url.pathname)) return;
   e.respondWith(caches.open(VERSION).then(async cache => {
     const key = req.mode === 'navigate' ? './index.html' : req;
     const hit = await cache.match(key, { ignoreSearch: true });
