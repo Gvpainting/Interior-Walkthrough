@@ -291,6 +291,40 @@ body:not(.home) #hsub{display:none}
 .bempty{color:var(--faint);text-align:center;padding:18px 6px;font-size:15px}
 .pincard b{display:block;font-size:16px}.pinrow{display:flex;gap:10px;margin-top:12px}.pinrow .field{flex:1;min-width:0}
 @media (max-width:699px){.board{grid-template-columns:1fr}}
+/* ---------- v10 ---------- */
+.cpanel.open{margin-top:10px}
+.cpin{border:1px solid #e6e8ee;border-radius:14px;background:#f7f8fb;padding:8px 8px 8px}
+.cphead{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--accent-d);margin:2px 6px 6px}
+.cpin .list{background:#fff}.cpin .row{min-height:48px}.cpin .row+.row{border-top:1px solid #eceef3}
+.cpin .stepper{box-shadow:none;background:var(--fill)}
+/* project recap */
+.recapta{min-height:200px!important;font-size:17px;line-height:1.5}
+/* compact product & sheen at the bottom of a room */
+.psmini{margin-top:0;min-height:44px;padding:0 12px;background:#f7f8fb;border:1px solid #e6e8ee}
+.psmini .dl{font-size:14px;font-weight:600;color:var(--sub);flex:none}
+.psmini .ds{flex:1;max-width:none;font-size:14px;text-align:right}
+.grp.psgrp{padding-top:10px;padding-bottom:12px}
+.grp.psgrp .pss{margin-top:10px}
+.cabnote{font-size:13px;color:var(--sub);margin:8px 2px 0}
+.chip.cab{background:#fff;border:2px solid var(--accent-soft);color:var(--accent-d)}
+/* upload button in the bottom bar (was "+ Add room") */
+.upbtn{flex:none;min-height:48px;min-width:132px;padding:0 20px;border-radius:999px;background:var(--accent);color:#fff;font-weight:600;font-size:16px;
+ box-shadow:0 4px 12px rgba(47,109,181,.35);display:inline-flex;align-items:center;justify-content:center;gap:8px;
+ transition:transform .08s,background .15s,box-shadow .15s;-webkit-tap-highlight-color:rgba(255,255,255,.25)}
+.upbtn:active,.upbtn.pressed{transform:scale(.94);background:var(--accent-d);box-shadow:0 1px 4px rgba(47,109,181,.35)}
+.upbtn.busy{background:#5d87bd;cursor:progress}
+.upbtn.ok{background:var(--ok);box-shadow:0 4px 12px rgba(52,168,83,.35)}
+.upbtn.err{background:#b06000;box-shadow:0 4px 12px rgba(176,96,0,.3)}
+.upbtn.done{background:#fff;color:var(--accent-d);box-shadow:0 0 0 2px var(--accent-soft) inset}
+.upbtn:disabled{opacity:1}
+.spin{width:16px;height:16px;border-radius:50%;border:2.5px solid rgba(255,255,255,.45);border-top-color:#fff;animation:spin .7s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.addroom2{width:100%;min-height:52px;font-size:17px}
+/* long-press a collapsed room */
+.room .mini{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;transition:transform .15s,background .15s}
+.room .mini.holding{transform:scale(.98);background:var(--accent-soft)}
+.lphint{font-size:13px;color:var(--faint);text-align:center;margin:-6px 0 14px}
+@media (prefers-reduced-motion:reduce){.spin{animation:spin 1.4s linear infinite!important}}
 </style>
 </head>
 <body>
@@ -302,7 +336,7 @@ body:not(.home) #hsub{display:none}
  <button class="more" data-act="menu" aria-label="More">&middot;&middot;&middot;</button>
 </header>
 <main id="app"></main>
-<div class="bar"><div class="in"><div class="switcher" id="switcher"></div><button class="addbtn" data-act="addsheet">+ Add room</button></div></div>
+<div class="bar"><div class="in"><div class="switcher" id="switcher"></div><button class="upbtn" id="upBtn" data-act="finish" aria-live="polite">Upload</button></div></div>
 <div class="scrim" id="scrim"></div>
 <div class="sheet" id="sheet" role="dialog"></div>
 <div class="toast" id="toast"></div>
@@ -324,6 +358,15 @@ const CIRCLE=[['fireplace','Fireplace'],['cabinetsCountertop','Cabinets/Countert
 const WALL_TEX=['Smooth','Textured','Plaster','Brick'], CEIL_TEX=['Smooth','Textured','Plaster','Popcorn'];
 const PAINT=[['baseboards','Baseboards'],['crown','Crown Moulding'],['stairs','Stairs'],['fireplace','Fireplace'],['shelving','Shelving'],['closets','Closets']];
 const COUNTS=[['windowTrim','Window trim'],['windowFrame','Window frame'],['doorTrim','Door trim'],['doorFrame','Door frame'],['doors','Doors'],['garageDoors','Garage doors'],['railingLnft','Railing (ln ft)'],['spindles','Spindles']];
+// v10: the old "Trim & doors" counts, split into Doors / Windows / Trim bubbles. Same counts.* keys as before.
+const CGROUPS=[['doors','Doors',[['doors','Doors'],['doorFrame','Door frames'],['doorTrim','Door trim'],['garageDoors','Garage doors']]],
+ ['windows','Windows',[['windowFrame','Window frames'],['windowTrim','Window trim']]],
+ ['trim','Trim',[['railingLnft','Railing (ln ft)'],['spindles','Spindles']]]];
+const GRP_OF=Object.fromEntries(CGROUPS.flatMap(([g,,f])=>f.map(([k])=>[k,g])));
+// bubble on/off: saved as painting.doors / painting.windows / painting.trim once tapped; before that (old walkthroughs) it's on when it has counts
+const grpHas=(r,g)=>CGROUPS.find(x=>x[0]===g)[2].some(([k])=>filled(r.counts[k]));
+const grpOn=(r,g)=>r.painting[g]!=null?!!r.painting[g]:grpHas(r,g);
+const cntOn=(r,k)=>filled(r.counts[k])&&grpOn(r,GRP_OF[k]);
 const CAB=[['doors','Doors'],['drawers','Drawers'],['boxFlats','Box flats']];
 const SHEENS=['Flat','Matte','Satin','Semi-Gloss','Gloss'];
 const LEGACY_SHEENS=['Eggshell']; // no longer offered; kept visible as "(saved)" on old drafts
@@ -335,18 +378,16 @@ function settings(){let o={};try{o=JSON.parse(localStorage.getItem(K_SET))||{}}c
 // Each walkthrough records the standard name in effect (job.standardProduct), so a later change doesn't relabel past jobs.
 const stdName=d=>{d=d||S;return (d&&d.job&&d.job.standardProduct)||settings().standardProduct||STANDARD_PRODUCT};
 const stdValue=d=>'Standard ('+stdName(d)+')';
-const prodSel=d=>[[stdValue(d),'Standard - '+stdName(d)],['Upgrade - Pre-Cat Epoxy','Upgrade - Pre-Cat Epoxy'],['Upgrade - Scuff Tough','Upgrade - Scuff Tough']];
+// v10: four simple paint choices. Standard is still saved as "Standard (<standard paint>)" like before; Upgrade / Budget as those words;
+// Custom is whatever was typed. Any other saved value (e.g. "Upgrade - Pre-Cat Epoxy", "Emerald") shows as Custom with that text.
+const prodSel=d=>[[stdValue(d),'Standard'],['Upgrade','Upgrade'],['Budget','Budget']];
 const prodOpts=d=>prodSel(d).map(o=>o[0]);
-const prodLabel=v=>(prodSel().find(o=>o[0]===v)||[,v])[1];
+const isStdVal=v=>/^standard\b/i.test((v||'').trim());
+const prodKind=v=>{v=(v||'').trim();return !v?'':isStdVal(v)?'standard':v==='Upgrade'?'upgrade':v==='Budget'?'budget':'custom'};
+const prodShort=v=>{const k=prodKind(v);return k==='custom'?'Custom: '+v.trim():k?k[0].toUpperCase()+k.slice(1):''};
+const prodLabel=prodShort;
 const defProd=d=>stdValue(d),DEF_SHEEN='Satin';
-function mapProd(t,d){t=(t||'').trim();if(!t)return '';const ex=prodOpts(d).find(o=>o.toLowerCase()===t.toLowerCase());if(ex)return ex;
- const l=t.toLowerCase().replace(/[^a-z]/g,'');
- if(l.includes('precat')||l.includes('epoxy'))return 'Upgrade - Pre-Cat Epoxy';
- if(l.includes('scufftough'))return 'Upgrade - Scuff Tough';
- if(l.includes('duration')||l.startsWith('standard'))return stdValue(d); // any older "Standard (…)" or Duration Interior
- if(l.includes('superpaint'))return 'Super Paint';
- if(l.includes('emerald')&&!l.includes('urethane'))return 'Emerald';
- return t}
+function mapProd(t,d){return (t||'').trim()} // v10: saved product text is kept exactly (v9 already tidied older values; Custom text stays as typed)
 function mapSheen(t){t=(t||'').trim();if(!t)return '';const l=t.toLowerCase().replace(/[^a-z]/g,'');return SHEENS.concat(LEGACY_SHEENS).find(x=>x.toLowerCase().replace(/[^a-z]/g,'')===l)||t}
 function sheenIn(t){const l=(t||'').toLowerCase().replace(/semi[\s-]?gloss/,'semigloss');return ['semigloss','eggshell','satin','matte','flat','gloss'].map(w=>l.includes(w)&&w).find(Boolean)}
 const PRODUCTS=['SW Duration','SW Emerald','SW SuperPaint','SW ProMar 200','SW Emerald Urethane Trim Enamel','SW Ceiling Bright White (flat ceiling paint)','SW Cashmere','SW Captivate','BM Regal Select','BM Advance','BM Aura','BM Ben','BM Waterborne Ceiling Paint'];
@@ -354,13 +395,25 @@ const PRODUCTS=['SW Duration','SW Emerald','SW SuperPaint','SW ProMar 200','SW E
 const SURFACES=[
  ['walls','Walls',r=>r.painting.walls],['ceilings','Ceilings',r=>r.painting.ceilings],
  ['baseboards','Baseboards',r=>r.painting.baseboards],['crown','Crown moulding',r=>r.painting.crown],
- ['windowTrim','Window trim',r=>filled(r.counts.windowTrim)],['windowFrame','Window frames',r=>filled(r.counts.windowFrame)],
- ['doorTrim','Door trim',r=>filled(r.counts.doorTrim)],['doorFrame','Door frames',r=>filled(r.counts.doorFrame)],['doors','Doors',r=>filled(r.counts.doors)],['garageDoors','Garage doors',r=>filled(r.counts.garageDoors)],
- ['stairs','Stairs',r=>r.painting.stairs],['railing','Railing',r=>filled(r.counts.railingLnft)],['spindles','Spindles',r=>filled(r.counts.spindles)],
+ ['windowTrim','Window trim',r=>cntOn(r,'windowTrim')],['windowFrame','Window frames',r=>cntOn(r,'windowFrame')],
+ ['doorTrim','Door trim',r=>cntOn(r,'doorTrim')],['doorFrame','Door frames',r=>cntOn(r,'doorFrame')],['doors','Doors',r=>cntOn(r,'doors')],['garageDoors','Garage doors',r=>cntOn(r,'garageDoors')],
+ ['stairs','Stairs',r=>r.painting.stairs],['railing','Railing',r=>cntOn(r,'railingLnft')],['spindles','Spindles',r=>cntOn(r,'spindles')],
  ['fireplace','Fireplace',r=>r.painting.fireplace],['shelving','Shelving',r=>r.painting.shelving],['closets','Closets',r=>r.painting.closets],
  ['cabinets','Cabinets',r=>r.ui.cabinets||CAB.some(([k])=>filled(r.cabinets[k]))]];
 const GTAGS=['Customer noticed issues','Pets','Occupied home','Tight deadline','Furniture help needed'];
 const SUGGEST=['Kitchen','Living Room','Bedroom','Bathroom','Hallway','Stairwell','Dining','Office','Laundry','Closet'];
+// v10: "Cabinets" is its own room. It shows the cabinet counts instead of walls/ceilings.
+// Stored as room.kind='cabinets' (new key, only on rooms added that way). Old rooms named "…cabinet…" count too.
+const isCabRoom=r=>r.kind==='cabinets'||(!r.kind&&/cabinet/i.test(r.name||''));
+const cabFilled=r=>CAB.some(([k])=>filled((r.cabinets||{})[k]));
+// a regular room that already carries cabinet info (older walkthroughs): keep showing it there
+const legacyCab=r=>!isCabRoom(r)&&(cabFilled(r)||!!(r.ui&&r.ui.cabinets));
+// any wall/trim info saved in a room (an older room named "Cabinets" may have some): never hide saved data
+function roomHasPaintData(r){const P=r.painting||{};
+ return [r.length,r.width,r.height].some(filled)||(r.walls||[]).some(w=>filled(w.length)||filled(w.height))||LINE.some(([k])=>filled(r.lineCutting[k]))||
+  COUNTS.some(([k])=>filled(r.counts[k]))||CIRCLE.some(([k])=>r.circle[k])||PAINT.some(([k])=>P[k])||P.walls||P.ceilings||P.otherTrim||otFilled(r).length}
+const cabStr=r=>CAB.filter(([k])=>filled(r.cabinets[k])).map(([k,l])=>r.cabinets[k]+' '+l.toLowerCase()).join(', ');
+const PSOPEN=new Set(); // which rooms have Product & sheen expanded (this session only, not saved)
 
 function blankRoom(name=''){
  const o=a=>Object.fromEntries(a.map(([k])=>[k,'']));
@@ -464,7 +517,7 @@ function derive(r){
 }
 const sizeStr=r=>(filled(r.length)||filled(r.width)||filled(r.height))?[r.length,r.width,r.height].map(v=>v===''?'–':v).join(' × '):'';
 /* ---------- product & sheen: surface override > room default > job default ---------- */
-const psTxt=x=>[x.product,x.sheen&&x.sheen.toLowerCase()].filter(Boolean).join(' ');
+const psTxt=x=>[prodShort(x.product),x.sheen&&x.sheen.toLowerCase()].filter(Boolean).join(' · ');
 const ovOf=(r,k)=>{const o=(r.productSheen.bySurface||{})[k]||{};return {product:(o.product||'').trim(),sheen:o.sheen||''}};
 function hasOverrides(r){return Object.values((r.productSheen&&r.productSheen.bySurface)||{}).some(o=>o&&((o.product||'').trim()||o.sheen))}
 const selSurfaces=r=>SURFACES.filter(([,,f])=>f(r));
@@ -472,8 +525,10 @@ function roomDefault(r){const D=r.productSheen.default; // surface > room > Stan
  return {product:(D.product||'').trim()||defProd(),sheen:D.sheen||DEF_SHEEN,source:'room'}}
 const OTHER=new Set();
 // Legacy values (Emerald, Super Paint, typed text) stay visible as an extra "(saved)" option; they aren't offered otherwise.
-function prodSelect(path,val,inherit){const known=prodOpts().includes(val);const PRODUCTS_SEL=prodSel();
- return `<select class="psel" data-sel="${path}" aria-label="Paint">${inherit?`<option value=""${!val?' selected':''}>${esc(inherit)}</option>`:(!val?'<option value="" selected>Choose paint…</option>':'')}${PRODUCTS_SEL.map(([v,l])=>`<option value="${esc(v)}"${val===v?' selected':''}>${esc(l)}</option>`).join('')}${val&&!known?`<option value="${esc(val)}" selected>${esc(val)} (saved)</option>`:''}</select>`}
+function prodPick(rid,path,val,inherit){const key=rid+':'+path,kind=prodKind(val),oth=kind==='custom'||OTHER.has(key);
+ const btn=(v,l,on,a='pick')=>`<button type="button" class="chip sm${on?' on':''}" data-act="${a}" data-p="${path}" data-v="${esc(v)}" aria-pressed="${!!on}">${esc(l)}</button>`;
+ return `<div class="pick" data-pick="${path}"><div class="chips">${inherit?btn('',inherit,!val&&!oth):''}${btn(stdValue(),'Standard',kind==='standard'&&!oth)}${btn('Upgrade','Upgrade',kind==='upgrade'&&!oth)}${btn('Budget','Budget',kind==='budget'&&!oth)}${btn('','Custom…',oth,'pickother')}</div>
+ ${oth?`<input class="field pother" data-f="${path}" value="${esc(kind==='custom'?val:'')}" placeholder="Type the paint, e.g. SW Emerald" list="gvProducts" autocomplete="off" autocapitalize="words" enterkeyhint="done" aria-label="Custom paint">`:''}</div>`}
 function pickHTML(k,path,val,groups,inherit){const opts=groups.flatMap(g=>g[1]),leg=!!val&&LEGACY_SHEENS.includes(val)&&!OTHER.has(k+path),oth=(val&&!opts.includes(val)&&!leg)||OTHER.has(k+path);
  const btn=(v,l,on,a='pick')=>`<button type="button" class="chip sm${on?' on':''}" data-act="${a}" data-p="${path}" data-v="${esc(v)}" aria-pressed="${!!on}">${esc(l)}</button>`;
  return `<div class="pick" data-pick="${path}">${inherit?`<div class="chips">${btn('',inherit,!val&&!oth)}</div>`:''}
@@ -489,15 +544,17 @@ function psLine(r){ // short grouped text, e.g. "Walls: SW Duration satin · Bas
  const g=new Map();for(const k of ks){const t=psTxt(E[k]);if(!t)continue;if(!g.has(t))g.set(t,[]);g.get(t).push(E[k].surface)}
  if(!g.size) return '';
  if(g.size===1&&!hasOverrides(r)) return [...g.keys()][0];
- return [...g].map(([t,ls])=>ls.join(', ')+': '+t).join(' · ')}
-function paintList(r){const P=r.painting;return [P.walls&&('Walls'+(P.wallsTexture.length?' ('+P.wallsTexture.join('/').toLowerCase()+')':'')),P.ceilings&&('Ceilings'+(P.ceilingsTexture.length?' ('+P.ceilingsTexture.join('/').toLowerCase()+')':'')),...PAINT.filter(([k])=>P[k]).map(([,l])=>l),...(P.otherTrim?otFilled(r).map(t=>(t.desc||'Other trim')+(filled(t.lnft)?' '+t.lnft+' LF':'')):[])].filter(Boolean)}
+ return [...g].map(([t,ls])=>ls.join(', ')+': '+t).join('; ')}
+function paintList(r){const P=r.painting;return [P.walls&&('Walls'+(P.wallsTexture.length?' ('+P.wallsTexture.join('/').toLowerCase()+')':'')),P.ceilings&&('Ceilings'+(P.ceilingsTexture.length?' ('+P.ceilingsTexture.join('/').toLowerCase()+')':'')),...CGROUPS.filter(([g])=>grpOn(r,g)).map(([g,l,f])=>{const v=f.filter(([k])=>filled(r.counts[k])).map(([k,lab])=>r.counts[k]+' '+lab.replace(/ \(ln ft\)/,' LF').toLowerCase());return l+(v.length?' ('+v.join(', ')+')':'')}),...PAINT.filter(([k])=>P[k]).map(([,l])=>l),...(P.otherTrim?otFilled(r).map(t=>(t.desc||'Other trim')+(filled(t.lnft)?' '+t.lnft+' LF':'')):[])].filter(Boolean)}
 function openingsStr(r){return LINE.filter(([k])=>filled(r.lineCutting[k])).map(([k,l])=>{const v=r.lineCutting[k];return v+' '+(k==='otherLnft'?'ln ft other':(v===1?l.slice(0,-1):l).toLowerCase())}).join(', ')}
 function roomSummary(r){
  const d=derive(r),a=[];
  const s=sizeStr(r); if(s)a.push(s+' ft');
+ const cs=cabStr(r); if(cs&&(isCabRoom(r)||legacyCab(r)))a.push('Cabinets: '+cs);
  if(r.colorMode)a.push(r.colorMode==='same'?'Same color':'Change color'+(r.color?' → '+r.color:'')); else if(r.color)a.push(r.color);
  const b=[]; if(d.wallSqft!=null)b.push(d.wallSqft+' sq ft walls'); const o=openingsStr(r); if(o)b.push(o);
  const p=paintList(r); if(p.length)b.push(p.join(', '));
+ if((r.outOfOrdinary||'').trim())b.push('Out of the ordinary: '+r.outOfOrdinary.trim());
  const ps=psLine(r);
  return {l1:a.join(' · ')||'Nothing entered yet',l2:b.join(' · '),l3:ps?'Paint: '+ps:''};
 }
@@ -557,51 +614,64 @@ function generalCard(){
   <label><span class="flabel">Due date / must be done by</span>${field('dueDate',G.dueDate,'e.g. Dec 15','enterkeyhint="next"')}</label>
   <label><span class="flabel">Colors discussed</span>${field('colors',G.colors,'e.g. SW Agreeable Gray','enterkeyhint="done"')}</label>
  </div>
- <div class="chips gtags">${GTAGS.map(t=>chip('tags',t,G.tags.includes(t),t,'sm')).join('')}</div>
+ ${G.tags.length?`<div class="cabnote">Older tags kept: ${esc(G.tags.join(', '))}</div>`:''}
  </div></section>`;
 }
+// v10: Project recap, typed after the walkthrough (back at the truck). Saved as job.recap.
+function recapCard(){const v=S.job.recap||'';
+ return `<section class="card${enterId==='recap'?' enter':''}" id="recap" data-scope="job"><div class="cpad">
+ <h2 class="ctitle">Project recap</h2><div class="csub" style="margin-bottom:14px">After the walkthrough: what happened, what you talked about, and anything that didn’t make it into the general notes.</div>
+ <textarea class="field recapta" data-f="recap" rows="7" placeholder="Summary of the visit…&#10;&#10;Tip: tap the mic on the keyboard to dictate.">${esc(v)}</textarea>
+ </div></section>`}
 const otList=r=>r.otherTrim.length?r.otherTrim:[{desc:'',lnft:''}];
 function otherTrimHTML(r){return `<div class="subl">Other trim: what it is and linear feet</div>${otList(r).map((t,j)=>`<div class="segrow ot"><input class="field" data-f="otherTrim.${j}.desc" value="${esc(t.desc)}" placeholder="What is it? e.g. Steel beam" autocomplete="off" aria-label="Other trim description"><span class="stepper"><button data-act="step" data-f="otherTrim.${j}.lnft" data-d="-1" aria-label="Less">−</button><input data-f="otherTrim.${j}.lnft" data-num value="${esc(t.lnft)}" inputmode="decimal" autocomplete="off" aria-label="Linear feet" placeholder="LF"><button data-act="step" data-f="otherTrim.${j}.lnft" data-d="1" aria-label="More">+</button></span>${r.otherTrim.length>1?`<button class="rm" data-act="deltrim" data-j="${j}" aria-label="Remove other trim">×</button>`:''}</div>`).join('')}<button class="linkbtn" data-act="addtrim">+ Add another</button>`}
 const otFilled=r=>(r.otherTrim||[]).filter(t=>(t.desc||'').trim()||filled(t.lnft));
 function roomCard(r,i){
  const enter=enterId===r.id?' enter':'';
  if(r.collapsed){const s=roomSummary(r);
-  return `<section class="card room${enter}" id="room-${r.id}" data-room="${r.id}"><button class="mini" data-act="openroom"><span class="badge">${i+1}</span><span class="mt"><b>${esc(r.name||'Untitled room')}</b><small>${esc(s.l1)}</small>${s.l2?`<small>${esc(s.l2)}</small>`:''}${s.l3?`<small class="clamp">${esc(s.l3)}</small>`:''}</span><span class="chev">›</span></button></section>`}
- const P=r.painting;
- return `<section class="card room${enter}" id="room-${r.id}" data-room="${r.id}">
- <div class="rhead"><span class="badge">${i+1}</span><input class="rtitle" data-f="name" value="${esc(r.name)}" placeholder="Room name" autocomplete="off" autocapitalize="words"><button class="iconbtn" data-act="collapse" aria-label="Collapse room">⌃</button></div>
- <div class="rbody"><div class="grp full"><h4>Color</h4><div class="stack">
+  return `<section class="card room${enter}" id="room-${r.id}" data-room="${r.id}"><button class="mini" data-act="openroom" data-lp="room"><span class="badge">${i+1}</span><span class="mt"><b>${esc(r.name||'Untitled room')}</b><small>${esc(s.l1)}</small>${s.l2?`<small>${esc(s.l2)}</small>`:''}${s.l3?`<small class="clamp">${esc(s.l3)}</small>`:''}</span><span class="chev">›</span></button></section>`}
+ const P=r.painting,cab=isCabRoom(r),full=!cab||roomHasPaintData(r);
+ const head=`<div class="rhead"><span class="badge">${i+1}</span><input class="rtitle" data-f="name" value="${esc(r.name)}" placeholder="Room name" autocomplete="off" autocapitalize="words"><button class="iconbtn" data-act="collapse" aria-label="Collapse room">⌃</button></div>`;
+ const color=`<div class="grp full"><h4>Color</h4><div class="stack">
   <div class="seg">${chipSeg('colorMode','same','Same color',r.colorMode)}${chipSeg('colorMode','change','Change color',r.colorMode)}</div>
-  ${field('color',r.color,'What color? (name or code)')}</div></div>
- <div class="grp l"><h4>Size<span>feet</span></h4>
+  ${field('color',r.color,'What color? (name or code)')}</div></div>`;
+ const cabCounts=`<div class="list">${CAB.map(([k,l])=>stepRow('cabinets.'+k,l,r.cabinets[k])).join('')}</div>`;
+ const cabGrp=cab?`<div class="grp full" data-cabgrp><h4>Cabinets</h4>${cabCounts}</div>`
+  :legacyCab(r)?`<div class="grp full" data-cabgrp><button class="switchrow${r.ui.cabinets?' on':''}" data-chip="ui.cabinets" role="switch" aria-checked="${r.ui.cabinets}"><span class="dl">Cabinets</span><span class="sw"></span></button>
+  ${reveal('ui.cabinets',cabCounts,r.ui.cabinets)}<div class="cabnote">Saved before cabinets became their own room. For new cabinet work, add a “Cabinets” room.</div></div>`:'';
+ const size=`<div class="grp full"><h4>Size<span>feet</span></h4>
   <div class="dims"><label><span class="flabel">Length</span>${field('length',r.length,'','data-num inputmode="decimal" data-next="width" enterkeyhint="next"')}</label><span class="x">×</span>
    <label><span class="flabel">Width</span>${field('width',r.width,'','data-num inputmode="decimal" data-next="height" enterkeyhint="next"')}</label><span class="x">×</span>
    <label><span class="flabel">Height</span>${field('height',r.height,'','data-num inputmode="decimal" enterkeyhint="done"')}</label></div>
   <div class="derived" data-derived></div>
   <button class="linkbtn" data-chip="ui.altWalls">${r.ui.altWalls?'Hide wall measurements':'Not a 4-wall room? Measure walls'}</button>
   ${reveal('ui.altWalls',`<div class="subl">Total wall surfaces when it isn't a square or 4-wall room</div>${r.walls.map((w,j)=>`<div class="segrow"><input class="field" data-f="walls.${j}.length" data-num value="${esc(w.length)}" inputmode="decimal" placeholder="Length" autocomplete="off"><span class="x">×</span><input class="field" data-f="walls.${j}.height" data-num value="${esc(w.height)}" inputmode="decimal" placeholder="Height" autocomplete="off">${r.walls.length>1?`<button class="rm" data-act="delwall" data-j="${j}" aria-label="Remove wall">×</button>`:''}</div>`).join('')}<button class="linkbtn" data-act="addwall">+ Add a wall</button>`,r.ui.altWalls)}
- </div>
- <div class="grp"><h4>Openings<span>line cutting</span></h4><div class="list">${LINE.map(([k,l])=>stepRow('lineCutting.'+k,l,r.lineCutting[k])).join('')}</div></div>
- <div class="grp full"><h4>What we're painting</h4>
-  <div class="chips">${chip('painting.walls','Walls',P.walls)}${chip('painting.ceilings','Ceilings',P.ceilings)}${PAINT.map(([k,l])=>chip('painting.'+k,l,P[k])).join('')}${chip('painting.otherTrim','Other trim',P.otherTrim)}</div>
+ </div>`;
+ const openings=`<div class="grp full" data-openings><h4>Openings<span>line cutting</span></h4><div class="list">${LINE.map(([k,l])=>stepRow('lineCutting.'+k,l,r.lineCutting[k])).join('')}</div></div>`;
+ // v10: order is Color, Size, In this room, Openings, What we're painting. Wall and ceiling finish are no longer asked (saved values stay in the data).
+ const inRoom=`<div class="grp full" data-inroom><h4>In this room<span>circle if applicable</span></h4><div class="chips">${CIRCLE.map(([k,l])=>chip('circle.'+k,l,r.circle[k])).join('')}</div></div>`;
+ const painting=`<div class="grp full" data-painting><h4>What we're painting</h4>
+  <div class="chips">${chip('painting.walls','Walls',P.walls)}${chip('painting.ceilings','Ceilings',P.ceilings)}${CGROUPS.map(([g,l])=>grpChip(r,g,l)).join('')}${PAINT.map(([k,l])=>chip('painting.'+k,l,P[k])).join('')}${chip('painting.otherTrim','Other trim',P.otherTrim)}</div>
+  ${CGROUPS.map(([g,l,f])=>`<div class="reveal cpanel${grpOn(r,g)?' open':''}" data-grppanel="${g}"><div><div class="cpin"><div class="cphead">${l}</div><div class="list">${f.map(([k,lab])=>stepRow('counts.'+k,lab,r.counts[k])).join('')}</div></div></div></div>`).join('')}
   ${reveal('painting.otherTrim',otherTrimHTML(r),P.otherTrim)}
-  ${reveal('painting.walls',`<div class="subl">Wall finish</div><div class="chips">${WALL_TEX.map(t=>chip('painting.wallsTexture',t,P.wallsTexture.includes(t),t,'sm')).join('')}</div>`,P.walls)}
-  ${reveal('painting.ceilings',`<div class="subl">Ceiling finish</div><div class="chips">${CEIL_TEX.map(t=>chip('painting.ceilingsTexture',t,P.ceilingsTexture.includes(t),t,'sm')).join('')}</div>`,P.ceilings)}
-  <button class="disc${r.ui.trim?' on':''}" data-chip="ui.trim"><span class="dl">Trim & doors</span><span class="ds" data-trimsum></span><span class="chev">›</span></button>
-  ${reveal('ui.trim',`<div class="list">${COUNTS.map(([k,l])=>stepRow('counts.'+k,l,r.counts[k])).join('')}</div>`,r.ui.trim)}
-  ${psBlock(r)}
- </div>
- <div class="grp l"><h4>In this room<span>circle if applicable</span></h4><div class="chips">${CIRCLE.map(([k,l])=>chip('circle.'+k,l,r.circle[k])).join('')}</div></div>
- <div class="grp"><h4>Patching & surprises</h4><div class="stack">${area('patching',r.patching,'Anything that needs patching before paint')}${area('outOfOrdinary',r.outOfOrdinary,'Anything out of the ordinary')}</div></div>
- <div class="grp l"><button class="switchrow${r.ui.cabinets?' on':''}" data-chip="ui.cabinets" role="switch" aria-checked="${r.ui.cabinets}"><span class="dl">Cabinets</span><span class="sw"></span></button>
-  ${reveal('ui.cabinets',`<div class="list">${CAB.map(([k,l])=>stepRow('cabinets.'+k,l,r.cabinets[k])).join('')}</div>`,r.ui.cabinets)}</div>
- <div class="grp"><h4>Notes</h4>${area('notes',r.notes,'Additional notes')}</div></div>
+ </div>`;
+ const patch=`<div class="grp l"><h4>Patching</h4>${area('patching',r.patching,'Anything that needs patching before paint')}${(r.outOfOrdinary||'').trim()?`<div class="cabnote" data-oldooo>Older note (out of the ordinary): ${esc(r.outOfOrdinary)}</div>`:''}</div>`;
+ const notes=`<div class="grp"><h4>Notes</h4>${area('notes',r.notes,'Additional notes')}</div>`;
+ const body=cab?color+cabGrp+(full?size+inRoom+openings+painting:'')+patch+notes:color+size+inRoom+openings+painting+patch+notes+cabGrp;
+ return `<section class="card room${enter}${cab?' cabroom':''}" id="room-${r.id}" data-room="${r.id}">
+ ${head}
+ <div class="rbody">${body}${psBlock(r)}</div>
  <div class="rfoot"><button class="btn" data-act="dup">Duplicate</button><button class="btn danger" data-act="del">Delete</button><button class="btn primary grow" data-act="done">Done</button></div>
  </section>`;
 }
-function psBlock(r){const D=r.productSheen.default,k=r.id+':';
- return `<div class="pss" data-ps><div class="pshead">Product & sheen</div>
- <div class="pglab">Paint</div>${prodSelect('productSheen.default.product',D.product||defProd(),null)}
+function grpChip(r,g,l){const on=grpOn(r,g);return `<button class="chip${on?' on':''}" data-act="grp" data-g="${g}" aria-pressed="${on}" aria-expanded="${on}">${l}</button>`}
+function psBlock(r){const D=r.productSheen.default,k=r.id+':',open=PSOPEN.has(r.id);
+ return `<div class="grp full psgrp"><button class="disc psmini${open?' on':''}" data-act="pstoggle" aria-expanded="${open}"><span class="dl">Product & sheen</span><span class="ds" data-pssum>${esc(psLine(r))}</span><span class="chev">›</span></button>
+ ${open?psInner(r):''}</div>`}
+function psInner(r){const D=r.productSheen.default,k=r.id+':';
+ return `<div class="pss" data-ps>
+ <div class="pglab">Paint</div>${prodPick(r.id,'productSheen.default.product',D.product||defProd(),null)}
+ <div class="pshint" style="margin:0 2px 4px">Standard = ${esc(stdName())}</div>
  <div class="pglab">Sheen</div>${pickHTML(k,'productSheen.default.sheen',D.sheen||DEF_SHEEN,[[null,SHEENS]],null)}
  <div data-pslist>${psListHTML(r)}</div></div>`}
 function psListHTML(r){const sel=selSurfaces(r),d=roomDefault(r),dt=psTxt(d)||'nothing set';
@@ -611,10 +681,10 @@ function psListHTML(r){const sel=selSurfaces(r),d=roomDefault(r),dt=psTxt(d)||'n
  ${sel.length>1||r.ui.psEach?`<button class="switchrow${r.ui.psEach?' on':''}" data-chip="ui.psEach" role="switch" aria-checked="${!!r.ui.psEach}"><span class="dl">Different for each surface</span><span class="sw"></span></button>`:''}
  ${reveal('ui.psEach',`<div class="pslist">${sel.map(([k,l])=>{const o=ovOf(r,k),ov=!!(o.product||o.sheen);
   return `<div class="psrow${ov?' ov':''}" data-psrow="${k}"><div class="psl">${esc(l)}<small data-pseff>${ov?'':'Same as room'}</small></div>
-   <div class="psrbody"><div class="pglab">Paint</div>${prodSelect('productSheen.bySurface.'+k+'.product',o.product,'Same as room'+(d.product?' ('+prodLabel(d.product)+')':''))}
+   <div class="psrbody"><div class="pglab">Paint</div>${prodPick(r.id,'productSheen.bySurface.'+k+'.product',o.product,'Same as room'+(d.product?' ('+prodLabel(d.product)+')':''))}
    <div class="pglab">Sheen</div>${pickHTML(r.id+':','productSheen.bySurface.'+k+'.sheen',o.sheen,[[null,SHEENS]],'Same as room'+(d.sheen?' ('+d.sheen+')':''))}</div></div>`}).join('')}</div>`,r.ui.psEach)}`}
 function psSync(el,r){ // keep the per-surface list in step with what's selected, without stealing focus while typing
- const box=el.querySelector('[data-pslist]'); if(!box) return;
+ const box=el.querySelector('[data-pslist]'); if(!box) return; if(box.dataset.sig==null) box.dataset.sig=selSurfaces(r).map(x=>x[0]).join()+'|'+(r.ui.psEach?1:0);
  const sig=selSurfaces(r).map(x=>x[0]).join()+'|'+(r.ui.psEach?1:0);
  if(box.dataset.sig!==sig){ if(box.dataset.sig!=null&&!(box.contains(document.activeElement)&&editable(document.activeElement))) box.innerHTML=psListHTML(r); box.dataset.sig=sig; }
  const d=roomDefault(r),dt=psTxt(d)||'nothing set';
@@ -637,12 +707,13 @@ function reviewCard(){
  ${genLine()?`<button class="rv" data-act="genopen"><span class="badge dim">N</span><span class="mt"><b>General notes</b><small class="clamp">${esc(genLine())}</small>${S.general.colors?`<small>Colors: ${esc(S.general.colors)}</small>`:''}</span><span class="chev">›</span></button>`:''}
  ${S.rooms.map((r,i)=>{const s=roomSummary(r);return `<button class="rv" data-act="jumproom" data-id="${r.id}"><span class="badge dim">${i+1}</span><span class="mt"><b>${esc(r.name||'Untitled room')}</b><small>${esc(s.l1)}</small>${s.l2?`<small>${esc(s.l2)}</small>`:''}${s.l3?`<small>${esc(s.l3)}</small>`:''}</span><span class="chev">›</span></button>`}).join('')}
  ${S.extras.length?`<div class="csub" style="margin:10px 0 0">Extras: ${S.extras.length} item${S.extras.length>1?'s':''}${priced.length?' · $'+priced.reduce((a,x)=>a+x.price,0).toLocaleString()+' priced':''}${quote?' · '+quote+' need a quote':''}</div>`:''}
- <div class="actions" style="margin-top:16px"><button class="btn primary finish" data-act="finish">${S.uploadedAt&&!S.pendingUpload&&!isDirty(S)?'Uploaded ✓ · Upload again':S.pendingUpload?'Waiting to upload… · Try now':'Finish &amp; upload'}</button></div>
- <div class="csub" style="margin-top:8px">${uploadLine(S)}</div>
+ ${(S.job.recap||'').trim()?`<button class="rv" data-act="jump" data-to="recap"><span class="badge dim">R</span><span class="mt"><b>Project recap</b><small class="clamp">${esc(S.job.recap.trim())}</small></span><span class="chev">›</span></button>`:''}
+ <div class="actions" style="margin-top:16px"><button class="btn primary addroom2" data-act="addsheet">+ Add room</button></div>
+ <div class="csub" style="margin-top:8px" id="upLine">${uploadLine(S)} Upload is at the bottom right.</div>
  <div class="actions" style="margin-top:10px"><button class="btn" data-act="export">Export</button><button class="btn" data-act="print">Print / PDF</button></div></div></section>`;
 }
 function roomPicker(center){
- return `<div class="picker"><div class="chips"${center?' style="justify-content:center"':''}>${SUGGEST.map(n=>`<button class="chip" data-act="quickadd" data-name="${n}">${n}</button>`).join('')}<button class="chip other" data-act="othershow" aria-expanded="false">+ Other room…</button></div>
+ return `<div class="picker"><div class="chips"${center?' style="justify-content:center"':''}>${SUGGEST.map(n=>`<button class="chip" data-act="quickadd" data-name="${n}">${n}</button>`).join('')}<button class="chip cab" data-act="quickadd" data-name="Cabinets">Cabinets</button><button class="chip other" data-act="othershow" aria-expanded="false">+ Other room…</button></div>
  <div class="cother" hidden><input class="field cname" type="text" placeholder="Type or tap the mic to dictate, e.g. Side room" autocomplete="off" autocapitalize="words" autocorrect="on" enterkeyhint="done" aria-label="Custom room name"><button class="btn primary" data-act="addcustom">Add</button></div></div>`;
 }
 function addCustom(from){
@@ -655,14 +726,14 @@ function render(){
  document.body.classList.remove('home');
  const dl=$('#gvProducts'); if(dl&&!dl.children.length) dl.innerHTML=PRODUCTS.map(x=>`<option value="${esc(x)}">`).join('');
  const empty=!S.rooms.length?`<section class="card empty"><h2 class="ctitle">Rooms</h2><p>Add the first room to start the walkthrough.</p>${roomPicker(true)}</section>`:'';
- $('#app').innerHTML=tipCard()+jobCard()+generalCard()+prepCard()+S.rooms.map(roomCard).join('')+empty+extrasCard()+reviewCard();
+ $('#app').innerHTML=tipCard()+jobCard()+generalCard()+prepCard()+S.rooms.map(roomCard).join('')+empty+extrasCard()+reviewCard()+recapCard();
  enterId=null;
  document.querySelectorAll('[data-room]').forEach(el=>meta(el.dataset.room));
- renderSwitcher(); title(); growAll();
+ renderSwitcher(); title(); growAll(); upBtn();
 }
 function renderSwitcher(){
  const act=S.rooms.find(r=>!r.collapsed);
- $('#switcher').innerHTML=`<button class="pill" data-act="jump" data-to="job">Job</button><button class="pill" data-act="jump" data-to="general">Notes</button>`+S.rooms.map((r,i)=>`<button class="pill${act&&act.id===r.id?' on':''}" data-act="jumproom" data-id="${r.id}">${i+1}. ${esc(r.name||'Room')}</button>`).join('')+(S.rooms.length?`<button class="pill" data-act="jump" data-to="review">Review</button>`:'');
+ $('#switcher').innerHTML=`<button class="pill" data-act="jump" data-to="job">Job</button><button class="pill" data-act="jump" data-to="general">Notes</button>`+S.rooms.map((r,i)=>`<button class="pill${act&&act.id===r.id?' on':''}" data-act="jumproom" data-id="${r.id}">${i+1}. ${esc(r.name||'Room')}</button>`).join('')+(S.rooms.length?`<button class="pill" data-act="jump" data-to="review">Review</button>`:'')+`<button class="pill" data-act="jump" data-to="recap">Recap</button>`;
  const on=$('#switcher .pill.on'); if(on) on.scrollIntoView({inline:'center',block:'nearest'});
 }
 const K_ADDRS='gv-recent-addresses';
@@ -674,9 +745,10 @@ function meta(id){
  const r=roomById(id),el=document.getElementById('room-'+id); if(!r||!el||r.collapsed) return;
  const d=derive(r),p=[];
  if(d.wallSqft!=null)p.push(`<b>${d.wallSqft}</b> sq ft walls`); if(d.floorSqft!=null)p.push(`<b>${d.floorSqft}</b> sq ft floor`); if(d.perimeterLnft!=null)p.push(`<b>${d.perimeterLnft}</b> ft perimeter`);
- el.querySelector('[data-derived]').innerHTML=p.join(' · ');
- el.querySelector('[data-trimsum]').textContent=COUNTS.filter(([k])=>filled(r.counts[k])).map(([k,l])=>l+' '+r.counts[k]).join(', ');
+ const dv=el.querySelector('[data-derived]'); if(dv) dv.innerHTML=p.join(' · ');
+ const ts=el.querySelector('[data-trimsum]'); if(ts) ts.textContent=COUNTS.filter(([k])=>filled(r.counts[k])).map(([k,l])=>l+' '+r.counts[k]).join(', ');
  psSync(el,r);
+ const sm=el.querySelector('[data-pssum]'); if(sm) sm.textContent=psLine(r);
 }
 function grow(t){t.style.height='auto';t.style.height=(t.scrollHeight)+'px'}
 function growAll(){document.querySelectorAll('textarea').forEach(grow)}
@@ -713,13 +785,13 @@ document.addEventListener('click',e=>{
  const c=e.target.closest('[data-chip]'); if(c){e.preventDefault();toggleChip(c);return}
  const b=e.target.closest('[data-act]'); if(b) act(b.dataset.act,b);
 });
-$('#scrim').addEventListener('click',closeSheet);
+$('#scrim').addEventListener('click',()=>{if(Date.now()-(typeof LP!=='undefined'?LP.openedAt||0:0)<400)return;closeSheet()}); // v10: the finger lifting after a long-press doesn't close its menu
 function toggleChip(c){
  const o=ctx(c),p=c.dataset.chip,v=c.dataset.val,cur=getP(o,p);
  if(Array.isArray(cur)){const i=cur.indexOf(v);i<0?cur.push(v):cur.splice(i,1)}
  else if(v!=null) setP(o,p,cur===v?'':v);
  else if(p==='ui.psEach'&&cur&&hasOverrides(o)&&!confirm('Use the room product & sheen for every surface? This clears the per-surface choices.')) return;
- else{setP(o,p,!cur); if(p==='ui.psEach'&&cur)o.productSheen.bySurface={}; if(p==='painting.walls'&&cur)o.painting.wallsTexture=[]; if(p==='painting.ceilings'&&cur)o.painting.ceilingsTexture=[];}
+ else{setP(o,p,!cur); if(p==='ui.psEach'&&cur)o.productSheen.bySurface={};}
  const scope=c.closest('[data-room],[data-extra],[data-scope]')||document; sync(scope,o);
  const r=c.closest('[data-room]'); if(r) meta(r.dataset.room);
  save();
@@ -727,7 +799,8 @@ function toggleChip(c){
 function setActive(id){S.rooms.forEach(r=>r.collapsed=r.id!==id)}
 function uniqueName(n){if(!n)return '';const has=x=>S.rooms.some(r=>r.name.toLowerCase()===x.toLowerCase());if(!has(n))return n;let i=2;while(has(n+' '+i))i++;return n+' '+i}
 function addRoom(name){
- const n=blankRoom(uniqueName(name)); S.rooms.push(n); setActive(n.id);
+ const n=blankRoom(uniqueName(name)); if(/cabinet/i.test(name||'')){n.kind='cabinets';n.ui.cabinets=true}
+ S.rooms.push(n); setActive(n.id);
  if(S.job.address){rememberAddr(S.job.address);S.jobCollapsed=true}
  if(!S.rooms.some(x=>x.id!==n.id)) S.generalCollapsed=true; // first room: tuck the notes away (one tap to reopen)
  enterId=n.id; save(); render(); closeSheet(); scrollToEl('room-'+n.id);
@@ -746,16 +819,20 @@ function act(a,b){
  case 'pickcancel':case 'jobdone':S.jobPicking=false;S.jobTyping=false;rememberAddr(S.job.address);render();break;
  case 'typeaddr':S.jobPicking=false;S.jobTyping=true;if(S.job.source==='link'){Object.assign(S.job,{name:'',phone:'',estimate:'',when:'',source:'manual'})}save();render();setTimeout(()=>{const i=document.querySelector('#job [data-f=address]');i&&i.focus()},50);break;
  case 'pick':case 'pickother':{const o=ctx(b),p=b.dataset.p,k=(roomEl?roomEl.dataset.room:'job')+':'+p;
-   if(a==='pick'){OTHER.delete(k);setP(o,p,b.dataset.v)}else{OTHER.add(k);const cur=getP(o,p)||'';if(prodOpts().includes(cur)||SHEENS.includes(cur))setP(o,p,'')}
+   if(a==='pick'){OTHER.delete(k);setP(o,p,b.dataset.v)}else{OTHER.add(k);const cur=getP(o,p)||'';if(prodOpts().includes(cur)||isStdVal(cur)||SHEENS.includes(cur))setP(o,p,'')}
    save();const y=scrollY;render();scrollTo(0,y);if(a==='pickother')setTimeout(()=>{const i=document.querySelector((roomEl?`[data-room="${roomEl.dataset.room}"]`:'#job')+` .pick[data-pick="${p}"] .pother`);i&&i.focus()},30);break}
  case 'quickadd':addRoom(b.dataset.name);break;
+ case 'grp':{const g=b.dataset.g,on=!grpOn(r,g);r.painting[g]=on; // values stay when turned off
+  b.classList.toggle('on',on);b.setAttribute('aria-pressed',on);b.setAttribute('aria-expanded',on);
+  const pn=roomEl.querySelector(`[data-grppanel="${g}"]`);if(pn)pn.classList.toggle('open',on);meta(r.id);save();break}
+ case 'pstoggle':{if(PSOPEN.has(r.id))PSOPEN.delete(r.id);else PSOPEN.add(r.id);const y=scrollY;render();scrollTo(0,y);break}
  case 'addcustom':addCustom(b);break;
   case 'othershow':{const box=b.closest('.picker').querySelector('.cother');box.hidden=false;b.classList.add('on');b.setAttribute('aria-expanded','true');const i=box.querySelector('.cname');i.focus();setTimeout(()=>keepInView(i),320);break}
- case 'openroom':case 'jumproom':{const id=b.dataset.id||roomEl.dataset.room;setActive(id);save();render();scrollToEl('room-'+id);break}
+ case 'openroom':case 'jumproom':{closeSheet();const id=b.dataset.id||roomEl.dataset.room;setActive(id);save();render();scrollToEl('room-'+id);break}
  case 'collapse':case 'done':{r.collapsed=true;save();render();const nx=document.getElementById('room-'+r.id);if(nx)nx.scrollIntoView({block:'nearest',behavior:'smooth'});break}
- case 'dup':{const n=JSON.parse(JSON.stringify(r));n.id=uid();n.name=uniqueName(r.name.replace(/ \d+$/,'')||'');n.patching='';n.notes='';n.outOfOrdinary='';
+ case 'dup':{closeSheet();const n=JSON.parse(JSON.stringify(r));n.id=uid();n.name=uniqueName(r.name.replace(/ \d+$/,'')||'');n.patching='';n.notes='';n.outOfOrdinary='';
   S.rooms.splice(S.rooms.indexOf(r)+1,0,n);setActive(n.id);enterId=n.id;save();render();scrollToEl('room-'+n.id);toast('Duplicated. Patching and notes left blank.');break}
- case 'del':{if(confirm(`Delete ${r.name?'"'+r.name+'"':'this room'}? This can't be undone.`)){S.rooms.splice(S.rooms.indexOf(r),1);save();render()}break}
+ case 'del':{closeSheet();if(confirm(`Delete ${r.name?'"'+r.name+'"':'this room'}? This can't be undone.`)){S.rooms.splice(S.rooms.indexOf(r),1);save();render()}break}
  case 'addtrim':if(!r.otherTrim.length)r.otherTrim.push({desc:'',lnft:''});r.otherTrim.push({desc:'',lnft:''});save();render();break;
  case 'deltrim':r.otherTrim.splice(+b.dataset.j,1);save();render();break;
  case 'addwall':r.walls.push({length:'',height:''});save();render();break;
@@ -773,7 +850,7 @@ function act(a,b){
  case 'savesettings':saveSettings();break;
  case 'export':closeSheet();exportJSON();break;
  case 'print':closeSheet();doPrint();break;
- case 'upload':case 'finish':closeSheet();finishAndUpload();break;
+ case 'upload':case 'finish':closeSheet();if(!UP.busy)finishAndUpload();break;
  case 'list':goHome();break;
  case 'home':goHome();break;
  case 'openwt':openFromBoard(b.dataset.id);break;
@@ -912,7 +989,7 @@ async function saveSettings(){
 /* ---------- export / print / upload ---------- */
 function exportPayload(){
  const {jobCollapsed,generalCollapsed,jobPicking,jobTyping,uploadedSig,uploadedVersion,...rest}=S;
- return {schema:SCHEMA,exportedAt:new Date().toISOString(),app:'Grandview Walkthrough (v9)',
+ return {schema:SCHEMA,exportedAt:new Date().toISOString(),app:'Grandview Walkthrough (v10)',
   job:{address:(S.job.address||'').trim()||null,standardProduct:stdName(),customerName:S.job.name||null,phone:S.job.phone||null,paintscoutEstimate:S.job.estimate||null,appointment:S.job.when||null,source:S.job.source==='link'?'link':'manual'},
   walkthrough:Object.assign({},rest,{rooms:S.rooms.map(r=>{const {collapsed,ui,...x}=r,c=JSON.parse(JSON.stringify(x));
    c.productSheen.bySurface=Object.fromEntries(Object.entries(c.productSheen.bySurface||{}).map(([k,o])=>[k,{product:(o.product||'').trim(),sheen:o.sheen||''}]).filter(([,o])=>o.product||o.sheen));
@@ -935,25 +1012,26 @@ function renderPrint(){
  <div class="pr b">Schedule: ${u(J.schedule)}</div>
  <div class="ps" style="margin-top:10px">General notes</div>${note(S.general.notes)}
  <div class="pr b" style="margin-top:6px">Due / done by: ${u(S.general.dueDate)} Colors discussed: ${u(S.general.colors)}</div>
- <div class="pl">${GTAGS.map(t=>c(S.general.tags.includes(t),t)).join(' ')}</div>
+ ${S.general.tags.length?`<div class="pl">${S.general.tags.map(t=>c(true,t)).join(' ')}</div>`:''}
  <div class="ps" style="margin-top:10px">Prep</div>
  <div class="pr b">Removes art & hangings: ${c(J.removesArt==='customer','Customer')}${c(J.removesArt==='grandview','Grandview')} &nbsp; Moves furniture: ${c(J.movesFurniture==='customer','Customer')}${c(J.movesFurniture==='grandview','Grandview')}</div>
  <div class="ps" style="margin-top:14px">Rooms</div><table class="pt"><tr><th>#</th><th>Room</th><th>Size (ft)</th><th>Walls sq ft</th><th>Color</th></tr>${S.rooms.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.name)}</td><td>${esc(sizeStr(r))}</td><td>${derive(r).wallSqft??''}</td><td>${esc((r.colorMode?(r.colorMode==='same'?'Same':'Change')+' · ':'')+r.color)}</td></tr>`).join('')}</table>
- <div class="ps" style="margin-top:14px">Extras</div><table class="pt"><tr><th>Item</th><th>Price</th><th>Needs quote</th></tr>${S.extras.map(x=>`<tr><td>${esc(x.item)}</td><td>${x.price!==''?'$'+esc(x.price):''}</td><td>${x.needsQuote?'Yes':''}</td></tr>`).join('')}</table></div>`;
+ <div class="ps" style="margin-top:14px">Extras</div><table class="pt"><tr><th>Item</th><th>Price</th><th>Needs quote</th></tr>${S.extras.map(x=>`<tr><td>${esc(x.item)}</td><td>${x.price!==''?'$'+esc(x.price):''}</td><td>${x.needsQuote?'Yes':''}</td></tr>`).join('')}</table>
+ ${(J.recap||'').trim()?`<div class="ps" style="margin-top:14px">Project recap</div>${note(J.recap)}`:''}</div>`;
  const roomPg=r=>{const P=r.painting;return `<div class="pg"><div class="ph"><img src="${logo}"><div class="pc">(${c(r.colorMode==='same','Same Color')} / ${c(r.colorMode==='change','Change Color')}) What color? ${u(r.color)}<div class="ptitle">Room: ${u(r.name)}</div></div></div>
  <div class="pr">Length: ${u(r.length)} Width: ${u(r.width)} Height: ${u(r.height)} <i style="color:#111;font-weight:400">(Overall Room Size)</i></div>
  ${r.walls.map(w=>`<div class="pr b">Length: ${u(w.length)} Height: ${u(w.height)} <small style="font-weight:400">(Total wall surfaces when not a square or 4 wall room)</small></div>`).join('')}
  <div class="p3"><div><div class="ps">Line Cutting:</div>${LINE.map(([k,l])=>`<div class="pl"><b>${k==='otherLnft'?'Other (Ln Feet)':'# '+l}:</b> ${esc(r.lineCutting[k])}</div>`).join('')}</div>
   <div><div class="ps">Circle if Applicable:</div>${CIRCLE.map(([k,l])=>`<div class="pl">${c(r.circle[k],l)}</div>`).join('')}</div>
-  <div><div class="ps">Needs patching before paint:</div>${note(r.patching)}<div class="ps" style="margin-top:6px">Out of the ordinary:</div>${note(r.outOfOrdinary)}</div></div>
+  <div><div class="ps">Needs patching before paint:</div>${note(r.patching)}${(r.outOfOrdinary||'').trim()?`<div class="ps" style="margin-top:6px">Out of the ordinary:</div>${note(r.outOfOrdinary)}`:''}</div></div>
  <div class="p2"><div><b style="text-decoration:underline">What are we painting?</b>
-  <div class="pl">${c(P.walls,'Walls')} - (${WALL_TEX.map(t=>c(P.wallsTexture.includes(t),t)).join(', ')})</div>
-  <div class="pl">${c(P.ceilings,'Ceilings')} - (${CEIL_TEX.map(t=>c(P.ceilingsTexture.includes(t),t)).join(', ')})</div>
+  <div class="pl">${c(P.walls,'Walls')}${P.wallsTexture.length?' - ('+esc(P.wallsTexture.join(', '))+')':''}</div>
+  <div class="pl">${c(P.ceilings,'Ceilings')}${P.ceilingsTexture.length?' - ('+esc(P.ceilingsTexture.join(', '))+')':''}</div>
   ${PAINT.map(([k,l])=>`<div class="pl">${c(P[k],l)}</div>`).join('')}
   <div class="pl">${c(P.otherTrim,'Other trim')}</div>${(P.otherTrim?otFilled(r):[]).map(t=>`<div class="pl" style="padding-left:14px">${u(t.desc)} Ln Ft: ${u(t.lnft)}</div>`).join('')}
   ${(()=>{const E=psEffective(r),ks=Object.keys(E),d=roomDefault(r);return `<div class="ps" style="margin-top:8px">Product & sheen:</div>`+(ks.length?ks.map(k=>`<div class="pl">${esc(E[k].surface)}: ${u(psTxt(E[k]))}</div>`).join(''):`<div class="pl">Room: ${u(psTxt(d))}</div>`)})()}</div>
-  <div style="padding-top:16px">${COUNTS.map(([k,l])=>`<div class="pl">${esc(l)}: ${k==='railingLnft'?'Ln Ft':'#'}${u(r.counts[k])}</div>`).join('')}</div></div>
- <div class="p2"><div>${c(r.ui.cabinets||CAB.some(([k])=>filled(r.cabinets[k])),'Cabinets')}${CAB.map(([k,l])=>`<div class="pl" style="padding-left:14px"># ${l}: ${esc(r.cabinets[k])}</div>`).join('')}</div><div><b>Additional Notes:</b>${note(r.notes)}</div></div></div>`};
+  <div style="padding-top:16px">${COUNTS.map(([k,l])=>`<div class="pl">${esc(l)}: ${k==='railingLnft'?'Ln Ft':'#'}${u(grpOn(r,GRP_OF[k])?r.counts[k]:'')}</div>`).join('')}</div></div>
+ <div class="p2"><div>${c(isCabRoom(r)||r.ui.cabinets||CAB.some(([k])=>filled(r.cabinets[k])),'Cabinets')}${CAB.map(([k,l])=>`<div class="pl" style="padding-left:14px"># ${l}: ${esc(r.cabinets[k])}</div>`).join('')}</div><div><b>Additional Notes:</b>${note(r.notes)}</div></div></div>`};
  $('#print').innerHTML=jobPg+S.rooms.map(roomPg).join('');
 }
 function doPrint(){renderPrint();setTimeout(()=>window.print(),50)}
@@ -986,14 +1064,38 @@ async function uploadOne(d){ // d may be S or a stored doc
   return true}
  catch(e){if(e.message==='not-configured')throw e; const tgt=(S&&S.id===d.id)?S:d; tgt.pendingUpload=true; storeDoc(tgt); return false}
 }
+// v10: the Upload button shows it caught the tap: pressed look, "Uploading…", then "Uploaded ✓" or a problem. No double taps.
+const UP={busy:false,flash:'',t:0};
+function upBtn(){const b=$('#upBtn');if(!b||!S)return;
+ let cls='',html;
+ if(UP.busy){cls='busy';html='<span class="spin" aria-hidden="true"></span>Uploading…'}
+ else if(UP.flash==='ok'){cls='ok';html='Uploaded ✓'}
+ else if(UP.flash==='err'){cls='err';html='Saved · will upload'}
+ else if(UP.flash==='noconf'){cls='err';html='Saved · no upload'}
+ else if(!UPLOAD_ENDPOINT)html='Finish';
+ else if(S.pendingUpload)html='Upload (waiting)';
+ else if(S.uploadedAt&&!isDirty(S)){cls='done';html='Uploaded ✓'}
+ else html=S.uploadedAt?'Upload changes':'Upload';
+ b.className='upbtn'+(cls?' '+cls:'');b.disabled=UP.busy;b.setAttribute('aria-busy',UP.busy?'true':'false');
+ if(b.innerHTML!==html)b.innerHTML=html}
+function upFlash(k,ms){UP.flash=k;upBtn();clearTimeout(UP.t);UP.t=setTimeout(()=>{UP.flash='';upBtn()},ms)}
 async function finishAndUpload(){
+ if(UP.busy)return;
  S.finishedAt=S.finishedAt||Date.now();
- if(!UPLOAD_ENDPOINT){save();render();toast("Marked finished. Upload isn't set up yet. Use Export for now.",4000);return}
- S.pendingUpload=true; save();
- const ok=await uploadOne(S); render();
+ if(!UPLOAD_ENDPOINT){save();render();upFlash('noconf',2500);toast("Marked finished. Upload isn't set up yet. Use Export for now.",4000);return}
+ UP.busy=true;UP.flash='';upBtn();
+ const t0=Date.now();let ok=false;
+ try{S.pendingUpload=true; save(); ok=await uploadOne(S);}
+ finally{const wait=Math.max(0,700-(Date.now()-t0));if(wait)await new Promise(r=>setTimeout(r,wait)); // long enough to see it
+  UP.busy=false}
+ render(); upFlash(ok?'ok':'err',ok?2500:3500);
  toast(ok?'Uploaded to Google Drive':"No connection. It'll upload automatically when you're back online.",3500);
  if(ok) retryPending();
 }
+// pressed look on iPad/iPhone (Safari only applies :active when a touch listener exists)
+document.addEventListener('touchstart',()=>{},{passive:true});
+(()=>{const b=$('#upBtn');if(!b)return;const on=()=>{if(!b.disabled)b.classList.add('pressed')},off=()=>b.classList.remove('pressed');
+ b.addEventListener('pointerdown',on);['pointerup','pointercancel','pointerleave'].forEach(e=>b.addEventListener(e,off));})();
 let retrying=false;
 async function retryPending(){
  if(!UPLOAD_ENDPOINT||!navigator.onLine||retrying) return; retrying=true; let n=0;
@@ -1001,7 +1103,7 @@ async function retryPending(){
   const d=(S&&S.id===m.id)?S:loadDoc(m.id); if(!d)continue; if(d!==S)migrate(d);
   if(await uploadOne(d))n++; else break}}
  finally{retrying=false}
- if(n){toast(n===1?'Uploaded 1 walkthrough':'Uploaded '+n+' walkthroughs');if(VIEW==='home')paintHome();else if($('#review'))render()}
+ if(n){toast(n===1?'Uploaded 1 walkthrough':'Uploaded '+n+' walkthroughs');if(VIEW==='home')paintHome();else render()}
 }
 /* shared settings (standard paint) via the same Apps Script web app */
 if(UPLOAD_ENDPOINT) settingsRemote={
@@ -1163,6 +1265,31 @@ document.addEventListener('dragleave',e=>{const col=e.target.closest&&e.target.c
 document.addEventListener('drop',e=>{const col=e.target.closest&&e.target.closest('.bcol');if(!col)return;e.preventDefault();col.classList.remove('over');const id=e.dataTransfer.getData('text/plain');if(id)setBoardStatus(id,col.dataset.st)});
 document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('bcard')){e.preventDefault();openFromBoard(e.target.dataset.id)}});
 
+/* ---------- v10: long-press a collapsed room for Duplicate / Delete ---------- */
+const LP={t:0,el:null,x:0,y:0,fired:false};
+function lpCancel(){clearTimeout(LP.t);if(LP.el)LP.el.classList.remove('holding');LP.el=null}
+function showRoomMenu(id){const r=roomById(id);if(!r)return;
+ LP.openedAt=Date.now(); if(navigator.vibrate)try{navigator.vibrate(12)}catch(e){}
+ openSheet(`<div data-room="${esc(id)}"><h3>${esc(r.name||'Untitled room')}</h3>
+ <button class="menuitem" data-act="dup">Duplicate room<small>patching & notes left blank</small></button>
+ <button class="menuitem" data-act="del" style="color:var(--danger)">Delete room…</button>
+ <button class="menuitem" data-act="close">Cancel</button></div>`)}
+document.addEventListener('pointerdown',e=>{LP.fired=false;const m=e.target.closest&&e.target.closest('[data-lp=room]');if(!m||(e.pointerType==='mouse'&&e.button!==0))return;
+ lpCancel();LP.el=m;LP.x=e.clientX;LP.y=e.clientY;LP.sy=scrollY;m.classList.add('holding');
+ const id=m.closest('[data-room]').dataset.room;
+ LP.t=setTimeout(()=>{LP.fired=true;lpCancel();showRoomMenu(id)},500)});
+document.addEventListener('pointermove',e=>{if(LP.el&&Math.hypot(e.clientX-LP.x,e.clientY-LP.y)>10)lpCancel()});
+['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,lpCancel));
+document.addEventListener('scroll',()=>{if(LP.el&&Math.abs(scrollY-LP.sy)>10)lpCancel()},{passive:true});
+// the tap that ends a long-press must not also open the room
+document.addEventListener('click',e=>{if(!LP.fired)return;LP.fired=false;
+ const inSheet=e.target.closest&&e.target.closest('#sheet');
+ if(!inSheet||Date.now()-LP.openedAt<1000){e.preventDefault();e.stopImmediatePropagation()}},true);
+// touch: lifting the finger after the menu opened sends no click at all (so it can't land on a menu item)
+document.addEventListener('touchend',e=>{if(LP.fired&&e.target.closest&&e.target.closest('[data-lp=room]')&&e.cancelable){e.preventDefault();LP.fired=false}},{passive:false});
+document.addEventListener('contextmenu',e=>{const m=e.target.closest&&e.target.closest('[data-lp=room]');if(!m)return;e.preventDefault();
+ if(!LP.fired){lpCancel();LP.fired=true;showRoomMenu(m.closest('[data-room]').dataset.room)}});
+document.addEventListener('selectstart',e=>{if(e.target.closest&&e.target.closest('[data-lp=room]'))e.preventDefault()});
 /* ---------- iOS: Add to Home Screen tip ---------- */
 const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const isStandalone=()=>navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
