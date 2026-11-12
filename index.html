@@ -320,6 +320,7 @@ body:not(.home) #hsub{display:none}
 .spin{width:16px;height:16px;border-radius:50%;border:2.5px solid rgba(255,255,255,.45);border-top-color:#fff;animation:spin .7s linear infinite;flex:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 .addroom2{width:100%;min-height:52px;font-size:17px}
+.roomacts{margin:0 0 16px}
 /* long-press a collapsed room */
 .room .mini{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;transition:transform .15s,background .15s}
 .room .mini.holding{transform:scale(.98);background:var(--accent-soft)}
@@ -401,7 +402,7 @@ const SURFACES=[
  ['fireplace','Fireplace',r=>r.painting.fireplace],['shelving','Shelving',r=>r.painting.shelving],['closets','Closets',r=>r.painting.closets],
  ['cabinets','Cabinets',r=>r.ui.cabinets||CAB.some(([k])=>filled(r.cabinets[k]))]];
 const GTAGS=['Customer noticed issues','Pets','Occupied home','Tight deadline','Furniture help needed'];
-const SUGGEST=['Kitchen','Living Room','Bedroom','Bathroom','Hallway','Stairwell','Dining','Office','Laundry','Closet'];
+const SUGGEST=['Kitchen','Living Room','Bedroom','Bathroom','Hallway','Stairwell','Dining','Office','Laundry','Closet','Section'];
 // v10: "Cabinets" is its own room. It shows the cabinet counts instead of walls/ceilings.
 // Stored as room.kind='cabinets' (new key, only on rooms added that way). Old rooms named "…cabinet…" count too.
 const isCabRoom=r=>r.kind==='cabinets'||(!r.kind&&/cabinet/i.test(r.name||''));
@@ -524,7 +525,7 @@ const selSurfaces=r=>SURFACES.filter(([,,f])=>f(r));
 function roomDefault(r){const D=r.productSheen.default; // surface > room > Standard / Satin
  return {product:(D.product||'').trim()||defProd(),sheen:D.sheen||DEF_SHEEN,source:'room'}}
 const OTHER=new Set();
-// Legacy values (Emerald, Super Paint, typed text) stay visible as an extra "(saved)" option; they aren't offered otherwise.
+// v10: product uses prodPick (Standard / Upgrade / Budget / Custom). pickHTML is still used for sheen.
 function prodPick(rid,path,val,inherit){const key=rid+':'+path,kind=prodKind(val),oth=kind==='custom'||OTHER.has(key);
  const btn=(v,l,on,a='pick')=>`<button type="button" class="chip sm${on?' on':''}" data-act="${a}" data-p="${path}" data-v="${esc(v)}" aria-pressed="${!!on}">${esc(l)}</button>`;
  return `<div class="pick" data-pick="${path}"><div class="chips">${inherit?btn('',inherit,!val&&!oth):''}${btn(stdValue(),'Standard',kind==='standard'&&!oth)}${btn('Upgrade','Upgrade',kind==='upgrade'&&!oth)}${btn('Budget','Budget',kind==='budget'&&!oth)}${btn('','Custom…',oth,'pickother')}</div>
@@ -702,16 +703,15 @@ function reviewCard(){
  if(!S.rooms.length) return '';
  const D=S.rooms.map(derive),sum=k=>D.reduce((a,d)=>a+(d[k]||0),0),cnt=f=>S.rooms.reduce((a,r)=>a+(typeof r.lineCutting[f]==='number'?r.lineCutting[f]:0),0);
  const priced=S.extras.filter(x=>typeof x.price==='number'),quote=S.extras.filter(x=>x.needsQuote).length;
- return `<section class="card" id="review"><div class="cpad"><h2 class="ctitle">Review & finish</h2><div class="csub">Check each room, then export or print.</div>
+ return `<section class="card" id="review"><div class="cpad"><h2 class="ctitle">Review & finish</h2><div class="csub">Totals for this walkthrough, then export or print.</div>
  <div class="totals"><div class="tot"><b>${S.rooms.length}</b><span>rooms</span></div><div class="tot"><b>${Math.round(sum('wallSqft'))||'–'}</b><span>sq ft walls</span></div><div class="tot"><b>${Math.round(sum('floorSqft'))||'–'}</b><span>sq ft floor/ceiling</span></div><div class="tot"><b>${cnt('doors')} / ${cnt('windows')}</b><span>doors / windows</span></div></div>
  ${genLine()?`<button class="rv" data-act="genopen"><span class="badge dim">N</span><span class="mt"><b>General notes</b><small class="clamp">${esc(genLine())}</small>${S.general.colors?`<small>Colors: ${esc(S.general.colors)}</small>`:''}</span><span class="chev">›</span></button>`:''}
- ${S.rooms.map((r,i)=>{const s=roomSummary(r);return `<button class="rv" data-act="jumproom" data-id="${r.id}"><span class="badge dim">${i+1}</span><span class="mt"><b>${esc(r.name||'Untitled room')}</b><small>${esc(s.l1)}</small>${s.l2?`<small>${esc(s.l2)}</small>`:''}${s.l3?`<small>${esc(s.l3)}</small>`:''}</span><span class="chev">›</span></button>`}).join('')}
  ${S.extras.length?`<div class="csub" style="margin:10px 0 0">Extras: ${S.extras.length} item${S.extras.length>1?'s':''}${priced.length?' · $'+priced.reduce((a,x)=>a+x.price,0).toLocaleString()+' priced':''}${quote?' · '+quote+' need a quote':''}</div>`:''}
  ${(S.job.recap||'').trim()?`<button class="rv" data-act="jump" data-to="recap"><span class="badge dim">R</span><span class="mt"><b>Project recap</b><small class="clamp">${esc(S.job.recap.trim())}</small></span><span class="chev">›</span></button>`:''}
- <div class="actions" style="margin-top:16px"><button class="btn primary addroom2" data-act="addsheet">+ Add room</button></div>
- <div class="csub" style="margin-top:8px" id="upLine">${uploadLine(S)} Upload is at the bottom right.</div>
+ <div class="csub" style="margin-top:16px" id="upLine">${uploadLine(S)} Upload is at the bottom right.</div>
  <div class="actions" style="margin-top:10px"><button class="btn" data-act="export">Export</button><button class="btn" data-act="print">Print / PDF</button></div></div></section>`;
 }
+
 function roomPicker(center){
  return `<div class="picker"><div class="chips"${center?' style="justify-content:center"':''}>${SUGGEST.map(n=>`<button class="chip" data-act="quickadd" data-name="${n}">${n}</button>`).join('')}<button class="chip cab" data-act="quickadd" data-name="Cabinets">Cabinets</button><button class="chip other" data-act="othershow" aria-expanded="false">+ Other room…</button></div>
  <div class="cother" hidden><input class="field cname" type="text" placeholder="Type or tap the mic to dictate, e.g. Side room" autocomplete="off" autocapitalize="words" autocorrect="on" enterkeyhint="done" aria-label="Custom room name"><button class="btn primary" data-act="addcustom">Add</button></div></div>`;
@@ -726,7 +726,8 @@ function render(){
  document.body.classList.remove('home');
  const dl=$('#gvProducts'); if(dl&&!dl.children.length) dl.innerHTML=PRODUCTS.map(x=>`<option value="${esc(x)}">`).join('');
  const empty=!S.rooms.length?`<section class="card empty"><h2 class="ctitle">Rooms</h2><p>Add the first room to start the walkthrough.</p>${roomPicker(true)}</section>`:'';
- $('#app').innerHTML=tipCard()+jobCard()+generalCard()+prepCard()+S.rooms.map(roomCard).join('')+empty+extrasCard()+reviewCard()+recapCard();
+ const addBar=S.rooms.length?`<div class="actions roomacts" id="roomacts"><button class="btn primary addroom2" data-act="addsheet">+ Add room</button></div>`:'';
+ $('#app').innerHTML=tipCard()+jobCard()+generalCard()+prepCard()+S.rooms.map(roomCard).join('')+empty+addBar+extrasCard()+reviewCard()+recapCard();
  enterId=null;
  document.querySelectorAll('[data-room]').forEach(el=>meta(el.dataset.room));
  renderSwitcher(); title(); growAll(); upBtn();
@@ -797,7 +798,11 @@ function toggleChip(c){
  save();
 }
 function setActive(id){S.rooms.forEach(r=>r.collapsed=r.id!==id)}
-function uniqueName(n){if(!n)return '';const has=x=>S.rooms.some(r=>r.name.toLowerCase()===x.toLowerCase());if(!has(n))return n;let i=2;while(has(n+' '+i))i++;return n+' '+i}
+function nextSectionName(){
+ let max=0; S.rooms.forEach(r=>{const m=(r.name||'').trim().match(/^Section\s+(\d+)$/i); if(m) max=Math.max(max,+m[1]);});
+ return 'Section '+(max+1);
+}
+function uniqueName(n){if(!n)return ''; if(/^section$/i.test(String(n).trim())) return nextSectionName(); const has=x=>S.rooms.some(r=>r.name.toLowerCase()===x.toLowerCase());if(!has(n))return n;let i=2;while(has(n+' '+i))i++;return n+' '+i}
 function addRoom(name){
  const n=blankRoom(uniqueName(name)); if(/cabinet/i.test(name||'')){n.kind='cabinets';n.ui.cabinets=true}
  S.rooms.push(n); setActive(n.id);
@@ -989,7 +994,7 @@ async function saveSettings(){
 /* ---------- export / print / upload ---------- */
 function exportPayload(){
  const {jobCollapsed,generalCollapsed,jobPicking,jobTyping,uploadedSig,uploadedVersion,...rest}=S;
- return {schema:SCHEMA,exportedAt:new Date().toISOString(),app:'Grandview Walkthrough (v10)',
+ return {schema:SCHEMA,exportedAt:new Date().toISOString(),app:'Grandview Walkthrough (v11)',
   job:{address:(S.job.address||'').trim()||null,standardProduct:stdName(),customerName:S.job.name||null,phone:S.job.phone||null,paintscoutEstimate:S.job.estimate||null,appointment:S.job.when||null,source:S.job.source==='link'?'link':'manual'},
   walkthrough:Object.assign({},rest,{rooms:S.rooms.map(r=>{const {collapsed,ui,...x}=r,c=JSON.parse(JSON.stringify(x));
    c.productSheen.bySurface=Object.fromEntries(Object.entries(c.productSheen.bySurface||{}).map(([k,o])=>[k,{product:(o.product||'').trim(),sheen:o.sheen||''}]).filter(([,o])=>o.product||o.sheen));
