@@ -264,6 +264,11 @@ body.kb .toast{display:none}
  .c.on{border-color:#d93025;font-weight:700}
  .pnote{white-space:pre-wrap;border:1px solid #ccc;border-radius:6px;padding:4px 6px;min-height:34px}
  table.pt{border-collapse:collapse;width:100%;margin-top:6px}table.pt td,table.pt th{border-bottom:1px solid #ddd;padding:3px 4px;text-align:left}
+ .xtitle{font-size:24px;color:#2f5f9e;font-weight:700;margin:8px 0 0;text-align:center}
+ .xrule{border-top:1px solid #999;margin-top:12px;padding-top:10px}
+ .xp2{display:grid;grid-template-columns:1fr 1.1fr;gap:14px}
+ .xp3{display:grid;grid-template-columns:1fr 1fr 1fr;margin-top:6px}.xp3>div{padding:0 12px;border-left:1px solid #111}.xp3>div:first-child{border-left:0;padding-left:0}
+ .xsub{padding-left:22px}
 }
 .psrow{display:block!important}.psrow .psl{margin-bottom:2px}.psrow input{grid-area:auto}
 /* ---------- v9: home board ---------- */
@@ -326,6 +331,41 @@ body:not(.home) #hsub{display:none}
 .room .mini.holding{transform:scale(.98);background:var(--accent-soft)}
 .lphint{font-size:13px;color:var(--faint);text-align:center;margin:-6px 0 14px}
 @media (prefers-reduced-motion:reduce){.spin{animation:spin 1.4s linear infinite!important}}
+/* ---------- v12: Interior / Exterior ---------- */
+.newrow{flex:1 1 100%;display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
+.newlab{flex:1 1 100%;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--sub);margin:0 2px -2px}
+.newrow .newbtn{flex:1 1 150px}.newbtn.alt{background:var(--accent-d);box-shadow:0 4px 14px rgba(31,53,87,.28)}
+.hero .bsearch{flex:1 1 100%}
+.tpbtns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px}
+.tpbtn{min-height:104px;border-radius:18px;background:var(--fill);font-size:20px;font-weight:700;color:var(--accent-d);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:12px;transition:transform .1s,background .15s}
+.tpbtn small{font-size:14px;font-weight:500;color:var(--sub)}
+.tpbtn:active{transform:scale(.97);background:var(--accent-soft)}
+@media (max-width:520px){.tpbtns{grid-template-columns:1fr}.tpbtn{min-height:68px}}
+.typetabs{margin:0 0 16px}
+.typetabs .seg{background:#e3e6ee;border-radius:14px;padding:4px}
+.typetabs .seg button{min-height:54px;font-size:18px;border-radius:11px;display:flex;align-items:center;justify-content:center;gap:8px}
+.typetabs .seg small{font-size:14px;font-weight:500;color:var(--sub)}
+.typeone{display:flex;align-items:center;gap:10px;padding:0 6px;color:var(--sub);font-size:15px;min-height:44px}
+.typeone b{color:var(--ink)}.typeone .linkbtn{margin:0 0 0 auto;font-weight:600}
+.badge.xb{background:#3d7a5a}
+/* counts sit right after the label, like "# Doors: 2" on the paper sheet; grey ends just after the +/- */
+.xcounts .list{width:fit-content;max-width:100%}
+.xcounts .row{justify-content:flex-start;gap:12px;padding-right:8px}
+.xcounts .row .rl{flex:0 0 9.75em;line-height:1.25}
+.xsize{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.xsize .xlen{flex:0 0 150px}.xsize .xlen .field{text-align:center;font-size:22px;font-weight:600;min-height:56px}
+.xsize .xh{flex:1 1 300px;min-width:0}.xsize .xh .chips{gap:8px}
+.chip.story{min-height:56px;padding:0 16px}.chip.story b{font-weight:700}
+.hcustom{display:block;max-width:180px;margin-top:10px}.hcustom .field{text-align:center;font-size:20px;font-weight:600}
+.ynrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.ynrow+.ynrow{margin-top:12px}
+.ynrow .dl{flex:1 1 200px;font-size:16px}.ynrow .seg{flex:0 1 240px;min-width:180px}
+.subchips{margin-top:12px;padding:10px 12px 12px;border-radius:14px;background:#f7f8fb;border:1px solid #e6e8ee}
+.subchips .cphead{margin:2px 2px 8px}
+.chip.xnote{white-space:normal;text-align:left;line-height:1.25;padding-top:8px;padding-bottom:8px}
+.totlab{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--accent-d);margin:16px 2px -6px}
+.side .mini{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;transition:transform .15s,background .15s}
+.side .mini.holding{transform:scale(.98);background:var(--accent-soft)}
+.btag{display:inline-block;padding:1px 8px;border-radius:999px;background:#e3f0e8;color:#2b6a49;font-size:12px;font-weight:700;margin-right:4px;vertical-align:1px}
 </style>
 </head>
 <body>
@@ -430,9 +470,70 @@ function blankWalkthrough(){
  return {schema:SCHEMA,id:uid(),created:Date.now(),updated:Date.now(),uploadedAt:null,jobCollapsed:false,
   job:{address:'',name:'',phone:'',estimate:'',when:'',source:'manual',date:today(),schedule:'',standardProduct:settings().standardProduct,removesArt:'',movesFurniture:'',notes:''},
   general:{notes:'',dueDate:'',colors:'',tags:[]},generalCollapsed:false,
-  rooms:[],extras:[]};
+  rooms:[],extras:[],types:['interior']}; // v12: a plain new walkthrough is Interior, like before
 }
 const filled=v=>v!==''&&v!=null&&v!==0;
+/* ---------- v12: exterior template, one form per side of the house ----------
+   Saved under walkthrough.exterior = {sides:[...], notes:{...}} and walkthrough.types = ['interior'] | ['exterior'] | ['interior','exterior'].
+   Older walkthroughs have neither key and stay exactly as they were (they read as Interior). */
+const XSIDES=['Front','Back','Left','Right','Garage','Deck','Section'];
+const XSTORY=[[1,'1 story',10],[2,'2 story',20],[3,'3 story',30]];
+const XSIDING=['Metal','Wood','Vinyl','Brick','Stucco','Board & Batten','Concrete','SmartSiding'];
+const XCOUNTS=[['doors','Doors'],['garageDoors','Garage doors'],['windows','Windows'],['downspouts','Downspouts'],['shutters','Shutters']];
+const XPAINT=[['siding','Siding'],['soffit','Soffit'],['fascia','Fascia'],['gutters','Gutters'],['downspouts','Downspouts'],['concreteStucco','Concrete / Stucco'],['windows','Windows'],['doors','Doors']];
+const XSUB={windows:[['windowsTrim','Trim'],['windowsFrame','Frame'],['windowsWindow','Window']],doors:[['doorsTrim','Trim'],['doorsFrame','Frame'],['doorsExterior','Exterior door'],['doorsGarage','Garage door']]};
+const XNOTES=[['spotPriming','Spot priming'],['rottenWood','Rotten wood'],['difficultAccess','Difficult access / Need a lift'],['steepRoofline','Steep roofline'],['peelingSiding','Peeling siding (extra powerwash time, discuss mess with customer)'],['scrapingSanding','Scraping or sanding']];
+const XLEAD=[['yes','Yes'],['no','No'],['unknown','Unknown']];
+const typeChosen=d=>{d=d||S;return !!(d&&Array.isArray(d.types)&&d.types.some(t=>t==='interior'||t==='exterior'))};
+const jobTypes=d=>{d=d||S;return typeChosen(d)?['interior','exterior'].filter(t=>d.types.includes(t)):['interior']};
+const hasType=(t,d)=>jobTypes(d).includes(t);
+const xsides=d=>{d=d||S;return (d&&d.exterior&&Array.isArray(d.exterior.sides))?d.exterior.sides:[]};
+// what the walkthrough actually covers (type picked, or data entered)
+const coversInt=d=>{d=d||S;return hasType('interior',d)||(d.rooms||[]).length>0};
+const coversExt=d=>{d=d||S;return hasType('exterior',d)||xsides(d).length>0};
+// a job started from the menu or a PaintScout link has types=[] until Interior / Exterior / Both is picked
+const needsType=d=>{d=d||S;return Array.isArray(d.types)&&!d.types.length&&!(d.rooms||[]).length&&!xsides(d).length};
+const typeLabel=d=>coversInt(d)&&coversExt(d)?'Interior + Exterior':coversExt(d)?'Exterior':'Interior';
+function blankSide(name=''){
+ const o=a=>Object.fromEntries(a.map(([k])=>[k,'']));
+ return {id:uid(),name,length:'',height:'',story:'',siding:[],counts:o(XCOUNTS),waterFaucet:'',outlets:'',mask:'',color:'',notes:'',
+  painting:Object.fromEntries([...XPAINT,...XSUB.windows,...XSUB.doors].map(([k])=>[k,false])),other:'',collapsed:false};
+}
+const blankXNotes=()=>Object.assign(Object.fromEntries(XNOTES.map(([k])=>[k,false])),{lead:'',notes:''});
+const blankExterior=()=>({sides:[],notes:blankXNotes()});
+function migrateExterior(d){
+ if(d.types!=null&&!Array.isArray(d.types))delete d.types;
+ if(!d.exterior||typeof d.exterior!=='object')return;
+ const b=blankSide();
+ d.exterior.sides=(Array.isArray(d.exterior.sides)?d.exterior.sides:[]).map(x=>{const n=Object.assign(blankSide(),x);
+  for(const k of ['counts','painting'])n[k]=Object.assign({},b[k],x[k]||{});
+  if(!Array.isArray(n.siding))n.siding=n.siding?[n.siding]:[];
+  delete n.derived;return n});
+ d.exterior.notes=Object.assign(blankXNotes(),d.exterior.notes||{});
+}
+function deriveSide(x){const n=v=>typeof v==='number'?v:NaN,L=n(x.length),H=n(x.height);return (L>0&&H>0)?{wallSqft:+(L*H).toFixed(1)}:{}}
+const storyOf=x=>XSTORY.find(t=>String(t[0])===String(x.story));
+const storyKey=x=>x.story!==''&&x.story!=null?String(x.story):(filled(x.height)?'custom':'');
+const heightStr=x=>{if(!filled(x.height))return '';const st=storyOf(x);return x.height+' ft'+(st&&st[2]===x.height?' ('+st[1]+')':'')};
+function xPaintList(x){const P=x.painting||{};
+ return XPAINT.filter(([k])=>P[k]).map(([k,l])=>{const sub=(XSUB[k]||[]).filter(([j])=>P[j]).map(([,t])=>t.toLowerCase());return l+(sub.length?' ('+sub.join(', ')+')':'')})
+  .concat((x.other||'').trim()?['Other: '+x.other.trim()]:[])}
+function xCountsStr(x){return XCOUNTS.filter(([k])=>filled(x.counts[k])).map(([k,l])=>{const v=x.counts[k];return v+' '+(v===1?l.replace(/s$/,''):l).toLowerCase()}).join(', ')}
+function sideSummary(x){
+ const a=[],b=[],dv=deriveSide(x);
+ if(filled(x.length)||filled(x.height))a.push((filled(x.length)?x.length:'–')+' ft long × '+(heightStr(x)||'–'));
+ if(dv.wallSqft!=null)a.push(dv.wallSqft+' sq ft');
+ if(x.siding.length)a.push(x.siding.join(', '));
+ if((x.color||'').trim())a.push('Color: '+x.color.trim());
+ const cs=xCountsStr(x);if(cs)b.push(cs);
+ const m=[x.waterFaucet&&('Water: '+x.waterFaucet),x.outlets&&('Outlets: '+x.outlets),(x.mask||'').trim()&&('Mask: '+x.mask.trim())].filter(Boolean);if(m.length)b.push(m.join(', '));
+ const p=xPaintList(x);
+ if((x.notes||'').trim())p.push('Notes: '+x.notes.trim());
+ return {l1:a.join(' · ')||'Nothing entered yet',l2:b.join(' · '),l3:p.length?'Painting: '+p.join(', '):''};
+}
+function xNotesList(N){N=N||{};return XNOTES.filter(([k])=>N[k]).map(([,l])=>l.replace(/ \(.*\)$/,'')).concat(N.lead?['Lead: '+N.lead]:[])}
+function xTotals(d){const L=xsides(d),D=L.map(deriveSide),c=k=>L.reduce((a,x)=>a+(typeof x.counts[k]==='number'?x.counts[k]:0),0);
+ return {sides:L.length,wallSqft:Math.round(D.reduce((a,v)=>a+(v.wallSqft||0),0)),doors:c('doors'),garageDoors:c('garageDoors'),windows:c('windows'),downspouts:c('downspouts'),shutters:c('shutters')}}
 function migrate(d){
  d.job=d.job||{};
  if(!d.job.standardProduct)d.job.standardProduct=STANDARD_PRODUCT; // older drafts were made when Standard = Duration Interior
@@ -467,11 +568,12 @@ function migrate(d){
  if(!Array.isArray(d.general.tags)) d.general.tags=[];
  if(d.job.notes){d.general.notes=d.general.notes?d.general.notes+'\n'+d.job.notes:d.job.notes;d.job.notes=''}
  if(d.generalCollapsed==null) d.generalCollapsed=!!(d.rooms.length&&d.jobCollapsed);
+ migrateExterior(d); // v12: only touches walkthroughs that already have exterior data
 }
 function readIndex(){try{return JSON.parse(localStorage.getItem(K_INDEX))||{}}catch(e){return{}}}
 function loadDoc(id){try{return JSON.parse(localStorage.getItem(K_PRE+id))}catch(e){return null}}
 let S=null,lastSave=0,enterId=null;
-function ixEntry(d){return {id:d.id,customer:(d.job&&d.job.address)||'',address:'',date:d.job&&d.job.date,rooms:(d.rooms||[]).length,updated:d.updated,uploadedAt:d.uploadedAt||null,finished:!!d.finishedAt,pendingUpload:!!d.pendingUpload}}
+function ixEntry(d){return {id:d.id,customer:(d.job&&d.job.address)||'',address:'',date:d.job&&d.job.date,rooms:(d.rooms||[]).length,sides:xsides(d).length,types:typeChosen(d)?jobTypes(d):null,updated:d.updated,uploadedAt:d.uploadedAt||null,finished:!!d.finishedAt,pendingUpload:!!d.pendingUpload}}
 function save(){
  S.updated=Date.now();
  try{
@@ -490,7 +592,7 @@ function showSaved(pulse){
 function openDoc(id){
  const d=id&&loadDoc(id);
  const raw=d&&JSON.stringify(d);
- S=d||blankWalkthrough(); migrate(S);
+ S=d||Object.assign(blankWalkthrough(),{types:[]}); migrate(S); // v12: new from a link: ask Interior / Exterior / Both
  if(!d||JSON.stringify(S)!==raw) save(); // new, or upgraded from an older version
  else{localStorage.setItem(K_CUR,S.id);lastSave=S.updated;showSaved()}
  render(); window.scrollTo(0,0);
@@ -500,6 +602,8 @@ function openDoc(id){
 const getP=(o,p)=>p.split('.').reduce((a,k)=>a==null?a:a[k],o);
 function setP(o,p,v){const ks=p.split('.'),last=ks.pop();ks.reduce((a,k)=>(a[k]==null?(a[k]={}):a[k]),o)[last]=v}
 function ctx(el){
+ const sd=el.closest('[data-side]'); if(sd) return sideById(sd.dataset.side);
+ if(el.closest('[data-scope=xnotes]')) return S.exterior.notes;
  const r=el.closest('[data-room]'); if(r) return S.rooms.find(x=>x.id===r.dataset.room);
  const x=el.closest('[data-extra]'); if(x) return S.extras[+x.dataset.extra];
  if(el.closest('[data-scope=job]')) return S.job;
@@ -508,6 +612,7 @@ function ctx(el){
 }
 const numify=v=>{const t=String(v).trim();if(t==='')return '';const n=Number(t);return isFinite(n)?n:v};
 const roomById=id=>S.rooms.find(x=>x.id===id);
+const sideById=id=>xsides().find(x=>x.id===id);
 function derive(r){
  const n=v=>typeof v==='number'?v:NaN,L=n(r.length),W=n(r.width),H=n(r.height),out={};
  if(L>0&&W>0){out.floorSqft=+(L*W).toFixed(1);out.perimeterLnft=+(2*(L+W)).toFixed(1)}
@@ -592,7 +697,7 @@ function jobCard(){
  if(S.jobCollapsed) return `<section class="card" id="job" data-scope="job"><button class="mini" data-act="jobopen"><span class="badge dim">J</span><span class="mt"><b>${esc(J.address||'Job info')}</b><small>${esc([J.date,J.schedule].filter(Boolean).join(' · ')||'Tap to add the job address')}</small>${genLine()?`<small>${esc(genLine())}</small>`:''}</span><span class="chev">›</span></button></section>`;
  const seg=(f)=>`<div class="seg">${['customer','grandview'].map(v=>`<button data-chip="${f}" data-val="${v}" class="${J[f]===v?'on':''}">${v==='customer'?'Customer':'Grandview'}</button>`).join('')}</div>`;
  return `<section class="card${enterId==='job'?' enter':''}" id="job" data-scope="job">
- <div class="cpad"><div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:16px"><div style="flex:1"><h2 class="ctitle">Job</h2><div class="csub">Customer details come from the PaintScout / GoHighLevel link.</div></div>${S.rooms.length?'<button class="iconbtn" data-act="jobclose" aria-label="Collapse">⌃</button>':''}</div>
+ <div class="cpad"><div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:16px"><div style="flex:1"><h2 class="ctitle">Job</h2><div class="csub">Customer details come from the PaintScout / GoHighLevel link.</div></div>${(S.rooms.length||xsides().length)?'<button class="iconbtn" data-act="jobclose" aria-label="Collapse">⌃</button>':''}</div>
  <div class="fgrid wide">
 ${jobHead(J)}
   <label class="half"><span class="flabel">Walkthrough date</span>${field('date',J.date,'','type="date"')}</label>
@@ -700,17 +805,70 @@ function extrasCard(){
  <button class="chip add" data-act="addextra" style="margin-top:${S.extras.length?14:0}px">+ Add extra</button></div></section>`;
 }
 function reviewCard(){
- if(!S.rooms.length) return '';
+ const XL=xsides(); if(!S.rooms.length&&!XL.length) return '';
  const D=S.rooms.map(derive),sum=k=>D.reduce((a,d)=>a+(d[k]||0),0),cnt=f=>S.rooms.reduce((a,r)=>a+(typeof r.lineCutting[f]==='number'?r.lineCutting[f]:0),0);
  const priced=S.extras.filter(x=>typeof x.price==='number'),quote=S.extras.filter(x=>x.needsQuote).length;
  return `<section class="card" id="review"><div class="cpad"><h2 class="ctitle">Review & finish</h2><div class="csub">Totals for this walkthrough, then export or print.</div>
- <div class="totals"><div class="tot"><b>${S.rooms.length}</b><span>rooms</span></div><div class="tot"><b>${Math.round(sum('wallSqft'))||'–'}</b><span>sq ft walls</span></div><div class="tot"><b>${Math.round(sum('floorSqft'))||'–'}</b><span>sq ft floor/ceiling</span></div><div class="tot"><b>${cnt('doors')} / ${cnt('windows')}</b><span>doors / windows</span></div></div>
+ ${S.rooms.length?`${XL.length?'<div class="totlab">Interior</div>':''}<div class="totals"><div class="tot"><b>${S.rooms.length}</b><span>rooms</span></div><div class="tot"><b>${Math.round(sum('wallSqft'))||'–'}</b><span>sq ft walls</span></div><div class="tot"><b>${Math.round(sum('floorSqft'))||'–'}</b><span>sq ft floor/ceiling</span></div><div class="tot"><b>${cnt('doors')} / ${cnt('windows')}</b><span>doors / windows</span></div></div>`:''}
+ ${XL.length?xTotalsHTML(S.rooms.length>0):''}
  ${genLine()?`<button class="rv" data-act="genopen"><span class="badge dim">N</span><span class="mt"><b>General notes</b><small class="clamp">${esc(genLine())}</small>${S.general.colors?`<small>Colors: ${esc(S.general.colors)}</small>`:''}</span><span class="chev">›</span></button>`:''}
  ${S.extras.length?`<div class="csub" style="margin:10px 0 0">Extras: ${S.extras.length} item${S.extras.length>1?'s':''}${priced.length?' · $'+priced.reduce((a,x)=>a+x.price,0).toLocaleString()+' priced':''}${quote?' · '+quote+' need a quote':''}</div>`:''}
+ ${XL.length&&xNotesList(S.exterior.notes).length?`<button class="rv" data-act="xnopen"><span class="badge dim xb" style="color:#fff">X</span><span class="mt"><b>Exterior notes / requirements</b><small class="clamp">${esc(xNotesList(S.exterior.notes).join(', '))}${(S.exterior.notes.notes||'').trim()?' · '+esc(S.exterior.notes.notes.trim().split('\n')[0]):''}</small></span><span class="chev">›</span></button>`:''}
  ${(S.job.recap||'').trim()?`<button class="rv" data-act="jump" data-to="recap"><span class="badge dim">R</span><span class="mt"><b>Project recap</b><small class="clamp">${esc(S.job.recap.trim())}</small></span><span class="chev">›</span></button>`:''}
  <div class="csub" style="margin-top:16px" id="upLine">${uploadLine(S)} Upload is at the bottom right.</div>
  <div class="actions" style="margin-top:10px"><button class="btn" data-act="export">Export</button><button class="btn" data-act="print">Print / PDF</button></div></div></section>`;
 }
+
+function xTotalsHTML(label){const T=xTotals();
+ return `${label?'<div class="totlab">Exterior</div>':''}<div class="totals xtot"><div class="tot"><b>${T.sides}</b><span>side${T.sides===1?'':'s'}</span></div><div class="tot"><b>${T.wallSqft||'–'}</b><span>sq ft exterior walls</span></div><div class="tot"><b>${T.doors}</b><span>doors</span></div><div class="tot"><b>${T.garageDoors}</b><span>garage doors</span></div><div class="tot"><b>${T.windows}</b><span>windows</span></div><div class="tot"><b>${T.downspouts}</b><span>downspouts</span></div><div class="tot"><b>${T.shutters}</b><span>shutters</span></div></div>`}
+// v12: Interior / Exterior / Both. Picked on the home screen, or here when a job starts some other way (e.g. a PaintScout link).
+function typePickCard(){
+ return `<section class="card typepick" id="typepick"><div class="cpad"><h2 class="ctitle">What are we walking through?</h2><div class="csub">Pick one. You can add the other one inside the job later.</div>
+ <div class="tpbtns">${[['interior','Interior','Room by room'],['exterior','Exterior','Side by side']].map(([t,l,x])=>`<button class="tpbtn" data-act="settype" data-t="${t}"><span>${l}</span><small>${x}</small></button>`).join('')}</div></div></section>`}
+const curTab=()=>{const t=jobTypes();return t.length>1?(S.tab==='exterior'?'exterior':'interior'):(coversExt()&&!coversInt()?'exterior':'interior')};
+function typeBar(){
+ const t=jobTypes(),nR=S.rooms.length,nS=xsides().length,tab=curTab();
+ if(t.length>1) return `<div class="typetabs" id="typetabs"><div class="seg" role="tablist">${[['interior','Interior',nR+' room'+(nR===1?'':'s')],['exterior','Exterior',nS+' side'+(nS===1?'':'s')]].map(([k,l,x])=>`<button role="tab" data-act="tab" data-t="${k}" class="${tab===k?'on':''}" aria-selected="${tab===k}">${l}<small>${x}</small></button>`).join('')}</div></div>`;
+ const other=tab==='interior'?'exterior':'interior';
+ return `<div class="typetabs typeone" id="typetabs"><span><b>${tab==='interior'?'Interior':'Exterior'}</b> walkthrough</span><button class="linkbtn" data-act="addtype" data-t="${other}">+ Add ${other}</button></div>`}
+function sidePicker(center){
+ return `<div class="picker" data-kind="side"><div class="chips"${center?' style="justify-content:center"':''}>${XSIDES.map(n=>`<button class="chip" data-act="quickside" data-name="${n}">${n}</button>`).join('')}<button class="chip other" data-act="othershow" aria-expanded="false">+ Other side…</button></div>
+ <div class="cother" hidden><input class="field cname" type="text" placeholder="Type or tap the mic to dictate, e.g. Back porch" autocomplete="off" autocapitalize="words" autocorrect="on" enterkeyhint="done" aria-label="Custom side name"><button class="btn primary" data-act="addcustom">Add</button></div></div>`;
+}
+function sideCard(x,i){
+ const enter=enterId===x.id?' enter':'';
+ if(x.collapsed){const m=sideSummary(x);
+  return `<section class="card side${enter}" id="side-${x.id}" data-side="${x.id}"><button class="mini" data-act="sopen" data-lp="side"><span class="badge xb">${i+1}</span><span class="mt"><b>${esc(x.name||'Untitled side')}</b><small>${esc(m.l1)}</small>${m.l2?`<small>${esc(m.l2)}</small>`:''}${m.l3?`<small class="clamp">${esc(m.l3)}</small>`:''}</span><span class="chev">›</span></button></section>`}
+ const P=x.painting,st=storyKey(x);
+ const head=`<div class="rhead"><span class="badge xb">${i+1}</span><input class="rtitle" data-f="name" value="${esc(x.name)}" placeholder="Side name" autocomplete="off" autocapitalize="words"><button class="iconbtn" data-act="scollapse" aria-label="Collapse side">⌃</button></div>`;
+ const size=`<div class="grp full" data-xsize><h4>Size<span>feet</span></h4><div class="xsize">
+  <label class="xlen"><span class="flabel">Length</span>${field('length',x.length,'','data-num inputmode="decimal" enterkeyhint="done"')}</label>
+  <div class="xh"><span class="flabel">Height</span><div class="chips">${XSTORY.map(([v,l,h])=>`<button class="chip story${st===String(v)?' on':''}" data-act="story" data-v="${v}" aria-pressed="${st===String(v)}"><b>${l}</b>&nbsp;·&nbsp;${h} ft</button>`).join('')}<button class="chip story other${st==='custom'?' on':''}" data-act="story" data-v="custom" aria-pressed="${st==='custom'}">Custom…</button></div>
+  ${st==='custom'?`<label class="hcustom"><span class="flabel">Height (ft)</span>${field('height',x.height,'e.g. 14','data-num inputmode="decimal" enterkeyhint="done"')}</label>`:''}</div></div>
+  <div class="derived" data-derived></div></div>`;
+ const siding=`<div class="grp full" data-siding><h4>Siding type<span>tap all that apply</span></h4><div class="chips">${XSIDING.map(v=>chip('siding',v,x.siding.includes(v),v)).join('')}</div></div>`;
+ const colorG=`<div class="grp full" data-xcolor><h4>Color / product</h4>${field('color',x.color,'e.g. SW Duration, Agreeable Gray / Pure White trim','autocapitalize="words" enterkeyhint="done"')}</div>`;
+ const notesG=`<div class="grp full" data-xsnotes><h4>Notes</h4>${area('notes',x.notes,'Notes for this side')}</div>`;
+ const counts=`<div class="grp l xcounts" data-xcounts><h4>Counts</h4><div class="list">${XCOUNTS.map(([k,l])=>stepRow('counts.'+k,'# '+l,x.counts[k])).join('')}</div></div>`;
+ const yn=(f,l)=>`<div class="ynrow"><span class="dl">${l}</span><div class="seg">${chipSeg(f,'yes','Yes',x[f])}${chipSeg(f,'no','No',x[f])}</div></div>`;
+ const mask=`<div class="grp" data-xmask><h4>Masking</h4>${yn('waterFaucet','Water faucet available?')}${yn('outlets','Exterior outlets active?')}
+  <label style="display:block;margin-top:14px"><span class="flabel">Any additional items to mask?</span>${area('mask',x.mask,'e.g. light fixtures, house numbers, AC unit')}</label></div>`;
+ const paint=`<div class="grp full" data-xpaint><h4>What are we painting?</h4><div class="chips">${XPAINT.map(([k,l])=>chip('painting.'+k,l,P[k])).join('')}</div>
+  ${['windows','doors'].map(g=>reveal('painting.'+g,`<div class="subchips"><div class="cphead">${g==='windows'?'Windows':'Doors'}</div><div class="chips">${XSUB[g].map(([k,l])=>chip('painting.'+k,l,P[k],null,'sm')).join('')}</div></div>`,P[g])).join('')}
+  <label style="display:block;margin-top:14px"><span class="flabel">Other?</span>${field('other',x.other,'Anything else on this side')}</label></div>`;
+ return `<section class="card side${enter}" id="side-${x.id}" data-side="${x.id}">
+ ${head}
+ <div class="rbody">${colorG}${size}${siding}${counts}${mask}${paint}${notesG}</div>
+ <div class="rfoot"><button class="btn" data-act="sdup">Duplicate</button><button class="btn danger" data-act="sdel">Delete</button><button class="btn primary grow" data-act="sdone">Done</button></div>
+ </section>`;
+}
+// Additional notes / requirements: once for the whole house (walkthrough.exterior.notes)
+function xNotesCard(){const N=S.exterior.notes;
+ return `<section class="card" id="xnotes" data-scope="xnotes"><div class="cpad"><h2 class="ctitle">Additional notes / requirements</h2><div class="csub">Once for the whole house.</div>
+ <div class="chips" style="margin-top:14px">${XNOTES.map(([k,l])=>chip(k,l,N[k],null,'xnote')).join('')}</div>
+ <div class="ynrow" style="margin-top:16px"><span class="dl">Is lead present?</span><div class="seg">${XLEAD.map(([v,l])=>chipSeg('lead',v,l,N.lead)).join('')}</div></div>
+ <label style="display:block;margin-top:14px"><span class="flabel">Notes</span>${area('notes',N.notes,'Anything else for the exterior: access, landscaping, colors…')}</label>
+ </div></section>`}
 
 function roomPicker(center){
  return `<div class="picker"><div class="chips"${center?' style="justify-content:center"':''}>${SUGGEST.map(n=>`<button class="chip" data-act="quickadd" data-name="${n}">${n}</button>`).join('')}<button class="chip cab" data-act="quickadd" data-name="Cabinets">Cabinets</button><button class="chip other" data-act="othershow" aria-expanded="false">+ Other room…</button></div>
@@ -719,7 +877,7 @@ function roomPicker(center){
 function addCustom(from){
  const box=from.closest('.picker'),inp=box&&box.querySelector('.cname'); if(!inp) return;
  const v=inp.value.trim(); if(!v){inp.focus();return}
- addRoom(v);
+ if(box.dataset.kind==='side') addSide(v); else addRoom(v);
 }
 function render(){
  if(VIEW==='home'){renderHome();return}
@@ -727,15 +885,33 @@ function render(){
  const dl=$('#gvProducts'); if(dl&&!dl.children.length) dl.innerHTML=PRODUCTS.map(x=>`<option value="${esc(x)}">`).join('');
  const empty=!S.rooms.length?`<section class="card empty"><h2 class="ctitle">Rooms</h2><p>Add the first room to start the walkthrough.</p>${roomPicker(true)}</section>`:'';
  const addBar=S.rooms.length?`<div class="actions roomacts" id="roomacts"><button class="btn primary addroom2" data-act="addsheet">+ Add room</button></div>`:'';
- $('#app').innerHTML=tipCard()+jobCard()+generalCard()+prepCard()+S.rooms.map(roomCard).join('')+empty+addBar+extrasCard()+reviewCard()+recapCard();
+ let mid;
+ if(needsType()) mid=typePickCard(); // a new job: Interior, Exterior or Both
+ else if(curTab()==='exterior'){const XL=xsides();
+  const xempty=!XL.length?`<section class="card empty" id="xempty"><h2 class="ctitle">Sides</h2><p>Add the first side of the house.</p>${sidePicker(true)}</section>`:'';
+  const xbar=XL.length?`<div class="actions roomacts" id="sideacts"><button class="btn primary addroom2" data-act="addside">+ Add side</button></div>`:'';
+  mid=typeBar()+XL.map(sideCard).join('')+xempty+xbar+xNotesCard()+extrasCard()}
+ else mid=typeBar()+prepCard()+S.rooms.map(roomCard).join('')+empty+addBar+extrasCard();
+ $('#app').innerHTML=tipCard()+jobCard()+generalCard()+mid+reviewCard()+recapCard();
  enterId=null;
  document.querySelectorAll('[data-room]').forEach(el=>meta(el.dataset.room));
+ document.querySelectorAll('section[data-side]').forEach(el=>sideMeta(el.dataset.side));
  renderSwitcher(); title(); growAll(); upBtn();
 }
 function renderSwitcher(){
+ if(!needsType()&&curTab()==='exterior'){const XL=xsides(),ax=XL.find(x=>!x.collapsed);
+  $('#switcher').innerHTML=`<button class="pill" data-act="jump" data-to="job">Job</button><button class="pill" data-act="jump" data-to="general">Notes</button>`+XL.map((x,i)=>`<button class="pill${ax&&ax.id===x.id?' on':''}" data-act="jumpside" data-id="${x.id}">${i+1}. ${esc(x.name||'Side')}</button>`).join('')+`<button class="pill" data-act="jump" data-to="xnotes">House notes</button>`+((S.rooms.length||XL.length)?`<button class="pill" data-act="jump" data-to="review">Review</button>`:'')+`<button class="pill" data-act="jump" data-to="recap">Recap</button>`;
+  const on=$('#switcher .pill.on'); if(on) on.scrollIntoView({inline:'center',block:'nearest'});return}
  const act=S.rooms.find(r=>!r.collapsed);
- $('#switcher').innerHTML=`<button class="pill" data-act="jump" data-to="job">Job</button><button class="pill" data-act="jump" data-to="general">Notes</button>`+S.rooms.map((r,i)=>`<button class="pill${act&&act.id===r.id?' on':''}" data-act="jumproom" data-id="${r.id}">${i+1}. ${esc(r.name||'Room')}</button>`).join('')+(S.rooms.length?`<button class="pill" data-act="jump" data-to="review">Review</button>`:'')+`<button class="pill" data-act="jump" data-to="recap">Recap</button>`;
+ $('#switcher').innerHTML=`<button class="pill" data-act="jump" data-to="job">Job</button><button class="pill" data-act="jump" data-to="general">Notes</button>`+S.rooms.map((r,i)=>`<button class="pill${act&&act.id===r.id?' on':''}" data-act="jumproom" data-id="${r.id}">${i+1}. ${esc(r.name||'Room')}</button>`).join('')+((S.rooms.length||xsides().length)?`<button class="pill" data-act="jump" data-to="review">Review</button>`:'')+`<button class="pill" data-act="jump" data-to="recap">Recap</button>`;
  const on=$('#switcher .pill.on'); if(on) on.scrollIntoView({inline:'center',block:'nearest'});
+}
+// exterior edits keep the Review totals current without redrawing the page (and losing the keyboard)
+function refreshReview(){const el=document.getElementById('review');if(!el)return;const t=document.createElement('div');t.innerHTML=reviewCard();if(t.firstElementChild)el.replaceWith(t.firstElementChild)}
+function sideMeta(id){
+ const x=sideById(id),el=document.getElementById('side-'+id); if(!x||!el||x.collapsed) return;
+ const d=deriveSide(x),dv=el.querySelector('[data-derived]');
+ if(dv) dv.innerHTML=d.wallSqft!=null?`<b>${d.wallSqft}</b> sq ft wall (${esc(x.length)} ft × ${esc(x.height)} ft)`:'';
 }
 const K_ADDRS='gv-recent-addresses';
 function recentAddrs(){try{return JSON.parse(localStorage.getItem(K_ADDRS))||[]}catch(e){return []}}
@@ -771,6 +947,9 @@ document.addEventListener('input',e=>{
  if(t.dataset.f==='address'&&t.closest('[data-scope=job]')){S.jobTyping=true;S.job.source='manual';title()}
  if(r){meta(r.dataset.room); if(t.dataset.f==='name') renderSwitcher();
 }
+ const sEl=t.closest('[data-side]');
+ if(sEl){sideMeta(sEl.dataset.side); if(t.dataset.f==='name') renderSwitcher();}
+ if(sEl||t.closest('[data-scope=xnotes]')) refreshReview();
  if(t.closest('[data-scope=job]')) title();
  save();
 });
@@ -793,8 +972,10 @@ function toggleChip(c){
  else if(v!=null) setP(o,p,cur===v?'':v);
  else if(p==='ui.psEach'&&cur&&hasOverrides(o)&&!confirm('Use the room product & sheen for every surface? This clears the per-surface choices.')) return;
  else{setP(o,p,!cur); if(p==='ui.psEach'&&cur)o.productSheen.bySurface={};}
- const scope=c.closest('[data-room],[data-extra],[data-scope]')||document; sync(scope,o);
+ const scope=c.closest('[data-side],[data-room],[data-extra],[data-scope]')||document; sync(scope,o);
  const r=c.closest('[data-room]'); if(r) meta(r.dataset.room);
+ const sEl=c.closest('[data-side]'); if(sEl) sideMeta(sEl.dataset.side);
+ if(c.closest('[data-side],[data-scope=xnotes]')) refreshReview();
  save();
 }
 function setActive(id){S.rooms.forEach(r=>r.collapsed=r.id!==id)}
@@ -810,12 +991,42 @@ function addRoom(name){
  if(!S.rooms.some(x=>x.id!==n.id)) S.generalCollapsed=true; // first room: tuck the notes away (one tap to reopen)
  enterId=n.id; save(); render(); closeSheet(); scrollToEl('room-'+n.id);
 }
+function setActiveSide(id){xsides().forEach(x=>x.collapsed=x.id!==id)}
+function uniqueSideName(n){n=String(n||'').trim();if(!n)return '';const L=xsides();
+ if(/^section$/i.test(n)){let max=0;L.forEach(x=>{const m=(x.name||'').trim().match(/^Section\s+(\d+)$/i);if(m)max=Math.max(max,+m[1])});return 'Section '+(max+1)}
+ const has=v=>L.some(x=>(x.name||'').toLowerCase()===v.toLowerCase());if(!has(n))return n;let i=2;while(has(n+' '+i))i++;return n+' '+i}
+function ensureExterior(){if(!S.exterior||typeof S.exterior!=='object')S.exterior=blankExterior();migrateExterior(S)}
+function ensureType(t){const cur=typeChosen()?jobTypes():((S.rooms.length||xsides().length)?jobTypes():[]);if(!cur.includes(t))cur.push(t);S.types=['interior','exterior'].filter(x=>cur.includes(x));if(t==='exterior')ensureExterior()}
+function addSide(name){
+ ensureType('exterior');const n=blankSide(uniqueSideName(name));
+ S.exterior.sides.push(n);setActiveSide(n.id);S.tab='exterior';
+ if(S.job.address){rememberAddr(S.job.address);S.jobCollapsed=true}
+ if(S.exterior.sides.length===1&&!S.rooms.length) S.generalCollapsed=true; // first side: tuck the notes away
+ enterId=n.id; save(); render(); closeSheet(); scrollToEl('side-'+n.id);
+}
 function scrollToEl(id){requestAnimationFrame(()=>{const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:'smooth',block:'start'})})}
 function act(a,b){
  const roomEl=b.closest('[data-room]'),r=roomEl&&roomById(roomEl.dataset.room);
+ const sideEl=b.closest('[data-side]'),sd=sideEl&&sideById(sideEl.dataset.side);
  switch(a){
  case 'step':{const o=ctx(b),f=b.dataset.f,cur=getP(o,f);let v=(typeof cur==='number'?cur:0)+(+b.dataset.d);v=v<=0?'':v;setP(o,f,v);
-  b.parentNode.querySelector('input').value=v; if(roomEl)meta(roomEl.dataset.room); save(); break}
+  b.parentNode.querySelector('input').value=v; if(roomEl)meta(roomEl.dataset.room); if(sideEl){sideMeta(sideEl.dataset.side);refreshReview()} save(); break}
+ /* ---- v12: job type + exterior sides ---- */
+ case 'settype':{const t=b.dataset.t;S.types=t==='both'?['interior','exterior']:[t];if(t!=='interior')ensureExterior();S.tab=t==='exterior'?'exterior':'interior';save();render();scrollToEl('typetabs');break}
+ case 'addtype':{const t=b.dataset.t;ensureType(t);S.tab=t;save();render();scrollToEl('typetabs');break}
+ case 'tab':{S.tab=b.dataset.t==='exterior'?'exterior':'interior';storeDoc(S);const y=scrollY;render();scrollTo(0,y);break}
+ case 'addside':showAddSide();break;
+ case 'quickside':addSide(b.dataset.name);break;
+ case 'story':{const v=b.dataset.v,cur=storyKey(sd);
+  if(v==='custom'){sd.story='custom'}else if(cur===v){sd.story='';sd.height=''}else{const p=XSTORY.find(x=>String(x[0])===v);sd.story=p[0];sd.height=p[2]}
+  save();const y=scrollY;render();scrollTo(0,y);
+  if(v==='custom'&&cur!=='custom')setTimeout(()=>{const i=document.querySelector(`#side-${sd.id} .hcustom input`);i&&i.focus()},30);break}
+ case 'sopen':case 'jumpside':{closeSheet();const id=b.dataset.id||sideEl.dataset.side;S.tab='exterior';setActiveSide(id);save();render();scrollToEl('side-'+id);break}
+ case 'scollapse':case 'sdone':{sd.collapsed=true;save();render();const nx=document.getElementById('side-'+sd.id);if(nx)nx.scrollIntoView({block:'nearest',behavior:'smooth'});break}
+ case 'sdup':{closeSheet();const n=JSON.parse(JSON.stringify(sd));n.id=uid();n.name=uniqueSideName((sd.name||'').replace(/ \d+$/,'')||'');n.mask='';n.other='';n.notes=''; // color / product is copied
+  const L=S.exterior.sides;L.splice(L.indexOf(sd)+1,0,n);setActiveSide(n.id);enterId=n.id;save();render();scrollToEl('side-'+n.id);toast('Duplicated. Notes, masking items and Other left blank.');break}
+ case 'sdel':{closeSheet();if(confirm(`Delete ${sd.name?'"'+sd.name+'"':'this side'}? This can't be undone.`)){const L=S.exterior.sides;L.splice(L.indexOf(sd),1);save();render()}break}
+ case 'xnopen':{S.tab='exterior';storeDoc(S);render();scrollToEl('xnotes');break}
  case 'addsheet':showAdd();break;
  case 'pickaddr':applyJob({address:b.dataset.addr},'manual');break;
  case 'pickjob':{const u=upcoming()[+b.dataset.i];if(u){const d=Object.values(readIndex()).map(m=>loadDoc(m.id)).filter(Boolean).find(d=>d.job&&(u.estimate?d.job.estimate===u.estimate:(d.job.address||'').toLowerCase()===(u.address||'').toLowerCase()));
@@ -863,7 +1074,10 @@ function act(a,b){
  case 'savepin':savePin();break;
  case 'devicelist':showList();break;
  case 'collapseall':S.rooms.forEach(x=>x.collapsed=true);save();render();closeSheet();break;
- case 'new':VIEW='edit';S=blankWalkthrough();save();render();closeSheet();window.scrollTo(0,0);toast('New walkthrough started');break;
+ case 'new':{VIEW='edit';S=blankWalkthrough();const t=b.dataset.t; // v12: home buttons say which kind; the menu leaves it to the picker card
+  if(t){S.types=t==='both'?['interior','exterior']:[t];if(t!=='interior')S.exterior=blankExterior();S.tab=t==='exterior'?'exterior':'interior'}
+  else S.types=[];
+  save();render();closeSheet();window.scrollTo(0,0);toast(t?'New '+(t==='both'?'interior + exterior':t)+' walkthrough started':'New walkthrough started');break}
  case 'open':openEdit(b.dataset.id);closeSheet();break;
  case 'deldoc':{const id=b.dataset.id,m=readIndex()[id];if(confirm(`Delete "${(m&&m.customer)||'Untitled'}" from this device? Export it first if you need it.`)){localStorage.removeItem(K_PRE+id);const ix=readIndex();delete ix[id];localStorage.setItem(K_INDEX,JSON.stringify(ix));if(VIEW==='home')paintHome();else if(S&&S.id===id){const rest=Object.values(ix).sort((a,b)=>b.updated-a.updated);openDoc(rest[0]&&rest[0].id)}showList()}break}
  case 'import':$('#importFile').click();break;
@@ -876,6 +1090,9 @@ function openSheet(html){$('#sheet').innerHTML='<div class="grab"></div>'+html;$
 function closeSheet(){$('#scrim').classList.remove('show');$('#sheet').classList.remove('show')}
 function showAdd(){
  openSheet(`<h3>Add a room</h3>${roomPicker(false)}`);
+}
+function showAddSide(){
+ openSheet(`<h3>Add a side</h3>${sidePicker(false)}`);
 }
 function showMenu(){
  if(VIEW==='home'){openSheet(`<h3>Walkthroughs</h3>
@@ -894,7 +1111,7 @@ function showMenu(){
 function showList(){
  const ix=Object.values(readIndex()).sort((a,b)=>b.updated-a.updated);
  openSheet(`<h3>Walkthroughs</h3>
- ${ix.map(m=>`<div class="wt${S&&m.id===S.id?' cur':''}"><div class="mt"><b>${esc(m.customer||'Untitled')}</b>${m.uploadedAt&&!m.pendingUpload?'<span class="ubadge ok">Uploaded</span>':m.pendingUpload?'<span class="ubadge pend">Pending upload</span>':m.finished?'<span class="ubadge">Finished</span>':''}<small>${esc([m.address,m.rooms+' room'+(m.rooms===1?'':'s'),'edited '+new Date(m.updated).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})].filter(Boolean).join(' · '))}</small></div>
+ ${ix.map(m=>`<div class="wt${S&&m.id===S.id?' cur':''}"><div class="mt"><b>${esc(m.customer||'Untitled')}</b>${m.uploadedAt&&!m.pendingUpload?'<span class="ubadge ok">Uploaded</span>':m.pendingUpload?'<span class="ubadge pend">Pending upload</span>':m.finished?'<span class="ubadge">Finished</span>':''}<small>${esc([m.address,m.rooms+' room'+(m.rooms===1?'':'s'),m.sides?m.sides+' side'+(m.sides===1?'':'s'):'','edited '+new Date(m.updated).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})].filter(Boolean).join(' · '))}</small></div>
   <button class="btn" data-act="open" data-id="${m.id}">Open</button><button class="btn danger" data-act="deldoc" data-id="${m.id}" aria-label="Delete">Delete</button></div>`).join('')}
  <div class="actions" style="margin-top:14px"><button class="btn primary" data-act="new">New walkthrough</button><button class="btn" data-act="import">Import file</button></div>
  <p class="csub" style="margin-top:12px">Saved on this device until exported or uploaded. Use it from the Home Screen so iPadOS keeps the data.</p>`);
@@ -993,12 +1210,15 @@ async function saveSettings(){
 }
 /* ---------- export / print / upload ---------- */
 function exportPayload(){
- const {jobCollapsed,generalCollapsed,jobPicking,jobTyping,uploadedSig,uploadedVersion,...rest}=S;
- return {schema:SCHEMA,exportedAt:new Date().toISOString(),app:'Grandview Walkthrough (v11)',
+ const {jobCollapsed,generalCollapsed,jobPicking,jobTyping,uploadedSig,uploadedVersion,tab,...rest}=S;
+ const out={schema:SCHEMA,exportedAt:new Date().toISOString(),app:'Grandview Walkthrough (v12)',
   job:{address:(S.job.address||'').trim()||null,standardProduct:stdName(),customerName:S.job.name||null,phone:S.job.phone||null,paintscoutEstimate:S.job.estimate||null,appointment:S.job.when||null,source:S.job.source==='link'?'link':'manual'},
   walkthrough:Object.assign({},rest,{rooms:S.rooms.map(r=>{const {collapsed,ui,...x}=r,c=JSON.parse(JSON.stringify(x));
    c.productSheen.bySurface=Object.fromEntries(Object.entries(c.productSheen.bySurface||{}).map(([k,o])=>[k,{product:(o.product||'').trim(),sheen:o.sheen||''}]).filter(([,o])=>o.product||o.sheen));
    return Object.assign(c,{productSheenEffective:psEffective(r),derived:derive(r)})})})};
+ // v12: exterior (only on walkthroughs that have it). Each side gets derived.wallSqft = length × height.
+ if(rest.exterior) out.walkthrough.exterior={sides:xsides().map(x=>{const {collapsed,...y}=x;return Object.assign(JSON.parse(JSON.stringify(y)),{derived:deriveSide(x)})}),notes:Object.assign(blankXNotes(),S.exterior.notes||{})};
+ return out;
 }
 function fileName(){const c=((S.job.address||'').split(',')[0].trim()||'walkthrough').replace(/[^\w\-]+/g,'-').replace(/^-|-$/g,'');return `grandview-${c}-${S.job.date||today()}.json`}
 async function exportJSON(){
@@ -1013,14 +1233,18 @@ async function exportJSON(){
 }
 function renderPrint(){
  const J=S.job,logo=$('#logo').src,c=(on,l)=>`<span class="c${on?' on':''}">${esc(l)}</span>`,u=v=>`<span class="u">${esc(v)}&nbsp;</span>`,note=v=>`<div class="pnote">${esc(v)}</div>`;
- const jobPg=`<div class="pg"><div class="ph"><img src="${logo}"><div class="pc"><div class="ptitle" style="margin:0">Interior Walkthrough</div>${esc(J.address)}<br><span style="font-weight:400">${esc([J.estimate&&'PaintScout #'+J.estimate,J.date].filter(Boolean).join(' · '))}</span></div></div>
+ const ti=coversInt(),te=coversExt(),XL=xsides(),XN=(S.exterior&&S.exterior.notes)||blankXNotes();
+ const xnotesHTML=`<div class="pl">${XNOTES.map(([k,l])=>c(XN[k],l)).join(', ')}, IS Lead Present? ${XLEAD.map(([v,l])=>c(XN.lead===v,l)).join(' / ')}</div>${(XN.notes||'').trim()?note(XN.notes):''}`;
+ const jobPg=`<div class="pg"><div class="ph"><img src="${logo}"><div class="pc"><div class="ptitle" style="margin:0">${ti&&te?'Interior &amp; Exterior':te?'Exterior':'Interior'} Walkthrough</div>${esc(J.address)}<br><span style="font-weight:400">${esc([J.estimate&&'PaintScout #'+J.estimate,J.date].filter(Boolean).join(' · '))}</span></div></div>
  <div class="pr b">Schedule: ${u(J.schedule)}</div>
  <div class="ps" style="margin-top:10px">General notes</div>${note(S.general.notes)}
  <div class="pr b" style="margin-top:6px">Due / done by: ${u(S.general.dueDate)} Colors discussed: ${u(S.general.colors)}</div>
  ${S.general.tags.length?`<div class="pl">${S.general.tags.map(t=>c(true,t)).join(' ')}</div>`:''}
- <div class="ps" style="margin-top:10px">Prep</div>
- <div class="pr b">Removes art & hangings: ${c(J.removesArt==='customer','Customer')}${c(J.removesArt==='grandview','Grandview')} &nbsp; Moves furniture: ${c(J.movesFurniture==='customer','Customer')}${c(J.movesFurniture==='grandview','Grandview')}</div>
- <div class="ps" style="margin-top:14px">Rooms</div><table class="pt"><tr><th>#</th><th>Room</th><th>Size (ft)</th><th>Walls sq ft</th><th>Color</th></tr>${S.rooms.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.name)}</td><td>${esc(sizeStr(r))}</td><td>${derive(r).wallSqft??''}</td><td>${esc((r.colorMode?(r.colorMode==='same'?'Same':'Change')+' · ':'')+r.color)}</td></tr>`).join('')}</table>
+ ${ti?`<div class="ps" style="margin-top:10px">Prep</div>
+ <div class="pr b">Removes art & hangings: ${c(J.removesArt==='customer','Customer')}${c(J.removesArt==='grandview','Grandview')} &nbsp; Moves furniture: ${c(J.movesFurniture==='customer','Customer')}${c(J.movesFurniture==='grandview','Grandview')}</div>`:''}
+ ${ti?`<div class="ps" style="margin-top:14px">Rooms</div><table class="pt"><tr><th>#</th><th>Room</th><th>Size (ft)</th><th>Walls sq ft</th><th>Color</th></tr>${S.rooms.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.name)}</td><td>${esc(sizeStr(r))}</td><td>${derive(r).wallSqft??''}</td><td>${esc((r.colorMode?(r.colorMode==='same'?'Same':'Change')+' · ':'')+r.color)}</td></tr>`).join('')}</table>`:''}
+ ${te?`<div class="ps" style="margin-top:14px">Exterior sides</div><table class="pt"><tr><th>#</th><th>Side</th><th>Length (ft)</th><th>Height</th><th>Wall sq ft</th><th>Siding</th></tr>${XL.map((x,i)=>`<tr><td>${i+1}</td><td>${esc(x.name)}</td><td>${esc(x.length)}</td><td>${esc(heightStr(x))}</td><td>${deriveSide(x).wallSqft??''}</td><td>${esc(x.siding.join(', '))}</td></tr>`).join('')}</table>
+ <div class="ps" style="margin-top:14px">Additional Notes / Requirements (whole house)</div>${xnotesHTML}`:''}
  <div class="ps" style="margin-top:14px">Extras</div><table class="pt"><tr><th>Item</th><th>Price</th><th>Needs quote</th></tr>${S.extras.map(x=>`<tr><td>${esc(x.item)}</td><td>${x.price!==''?'$'+esc(x.price):''}</td><td>${x.needsQuote?'Yes':''}</td></tr>`).join('')}</table>
  ${(J.recap||'').trim()?`<div class="ps" style="margin-top:14px">Project recap</div>${note(J.recap)}`:''}</div>`;
  const roomPg=r=>{const P=r.painting;return `<div class="pg"><div class="ph"><img src="${logo}"><div class="pc">(${c(r.colorMode==='same','Same Color')} / ${c(r.colorMode==='change','Change Color')}) What color? ${u(r.color)}<div class="ptitle">Room: ${u(r.name)}</div></div></div>
@@ -1037,7 +1261,22 @@ function renderPrint(){
   ${(()=>{const E=psEffective(r),ks=Object.keys(E),d=roomDefault(r);return `<div class="ps" style="margin-top:8px">Product & sheen:</div>`+(ks.length?ks.map(k=>`<div class="pl">${esc(E[k].surface)}: ${u(psTxt(E[k]))}</div>`).join(''):`<div class="pl">Room: ${u(psTxt(d))}</div>`)})()}</div>
   <div style="padding-top:16px">${COUNTS.map(([k,l])=>`<div class="pl">${esc(l)}: ${k==='railingLnft'?'Ln Ft':'#'}${u(grpOn(r,GRP_OF[k])?r.counts[k]:'')}</div>`).join('')}</div></div>
  <div class="p2"><div>${c(isCabRoom(r)||r.ui.cabinets||CAB.some(([k])=>filled(r.cabinets[k])),'Cabinets')}${CAB.map(([k,l])=>`<div class="pl" style="padding-left:14px"># ${l}: ${esc(r.cabinets[k])}</div>`).join('')}</div><div><b>Additional Notes:</b>${note(r.notes)}</div></div></div>`};
- $('#print').innerHTML=jobPg+S.rooms.map(roomPg).join('');
+ const sidePg=x=>{const P=x.painting,st=storyKey(x),sub=g=>XSUB[g].map(([k,l])=>`<div class="pl xsub">○ ${c(P[g]&&P[k],l)}</div>`).join('');
+  return `<div class="pg"><div class="ph"><img src="${logo}"><div class="pc"><div class="xtitle">Side: ${u(x.name)}</div></div></div>
+ <div class="pr b" style="margin-top:10px">Color / product: ${u(x.color)}</div>
+ <div class="pr b" style="margin-top:14px">Length: ${u(x.length)} &nbsp; Circle Height - ${XSTORY.map(([v,l,h])=>c(st===String(v),l+' ('+h+'ft)')).join(' ')}${st==='custom'?' '+c(true,'Other: '+x.height+' ft'):''} &nbsp; Wall sq ft: ${u(deriveSide(x).wallSqft??'')}</div>
+ <div class="pr b">Siding Type: <span style="font-weight:400">${XSIDING.map(v=>c(x.siding.includes(v),v)).join(' - ')}</span></div>
+ <div class="xrule xp2"><div>${XCOUNTS.map(([k,l])=>`<div class="pl"><b># ${esc(l)}:</b> ${esc(x.counts[k])}</div>`).join('')}</div>
+  <div><div class="pl">Water Faucet Available? ${c(x.waterFaucet==='yes','Yes')} / ${c(x.waterFaucet==='no','No')}</div><div class="pl">Exterior Outlets Active? ${c(x.outlets==='yes','Yes')} / ${c(x.outlets==='no','No')}</div>
+  <div class="pl"><b style="text-decoration:underline">Any Additional Items to Mask?</b></div>${note(x.mask)}</div></div>
+ <div class="xrule"><b style="text-decoration:underline">What are we painting?</b><div class="xp3">
+  <div>${['siding','soffit','fascia','gutters','downspouts'].map(k=>`<div class="pl">• ${c(P[k],XPAINT.find(p=>p[0]===k)[1])}</div>`).join('')}</div>
+  <div><div class="pl">• ${c(P.concreteStucco,'Concrete / Stucco')}</div><div class="pl">• ${c(P.windows,'Windows:')}</div>${sub('windows')}</div>
+  <div><div class="pl">• ${c(P.doors,'Doors:')}</div>${sub('doors')}</div></div>
+  <div class="pl" style="margin-top:8px"><i>Other? →</i> ${u(x.other)}</div></div>
+ <div class="xrule"><b>Notes:</b>${note(x.notes)}</div>
+ <div class="xrule"><b style="text-decoration:underline">Additional Notes / Requirements:</b> <small>(whole house)</small>${xnotesHTML}</div></div>`};
+ $('#print').innerHTML=jobPg+S.rooms.map(roomPg).join('')+XL.map(sidePg).join('');
 }
 function doPrint(){renderPrint();setTimeout(()=>window.print(),50)}
 window.addEventListener('beforeprint',renderPrint);
@@ -1149,7 +1388,7 @@ function isDirty(d){if(d.uploadedSig)return sigOf(d)!==d.uploadedSig;if(d.upload
 function remoteNewer(row,d){if(!d)return true;
  if(row.updated!=null)return row.updated>(d.uploadedVersion!=null?d.uploadedVersion:d.updated);
  return (Date.parse(row.modified)||0)>(d.uploadedAt||0)+120000} // rows uploaded before v9 have no edit stamp
-function isEmpty(d){const J=d.job||{},G=d.general||{};return !(J.address||'').trim()&&!(d.rooms||[]).length&&!(G.notes||'').trim()&&!J.name&&!J.estimate&&!(d.extras||[]).length}
+function isEmpty(d){const J=d.job||{},G=d.general||{},XN=(d.exterior&&d.exterior.notes)||{};return !(J.address||'').trim()&&!(d.rooms||[]).length&&!(G.notes||'').trim()&&!J.name&&!J.estimate&&!(d.extras||[]).length&&!xsides(d).length&&!xNotesList(XN).length&&!(XN.notes||'').trim()}
 const fmtD=s=>{if(!s)return '';const d=/^\d{4}-\d\d-\d\d$/.test(s)?new Date(s+'T12:00'):new Date(s);return isNaN(d)?s:d.toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})};
 const fmtAgo=t=>{const d=new Date(t),same=d.toDateString()===new Date().toDateString();return same?d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}):d.toLocaleDateString([],{month:'short',day:'numeric'})};
 async function api(body){
@@ -1163,7 +1402,7 @@ function boardCards(){
  for(const m of Object.values(readIndex())){const d=loadDoc(m.id);if(!d||!d.job||isEmpty(d))continue;seen.add(d.id);
   if(!d.uploadedSig&&d.uploadedAt&&!d.pendingUpload&&d.updated<=d.uploadedAt+2000){try{migrate(d);d.uploadedSig=sigOf(d);d.uploadedVersion=d.updated;storeDoc(d)}catch(e){}} // v8 uploads
   const r=byId[d.id],J=d.job,c={id:d.id,fileId:(r&&r.fileId)||d.driveFileId||null,address:J.address||'',customer:J.name||'',estimate:J.estimate||'',date:J.date||'',
-   rooms:(d.rooms||[]).length,modified:Math.max(d.updated||0,r?Date.parse(r.modified)||0:0),status:(r&&OKST[r.status])?r.status:'new',remote:!!r,tags:[]};
+   rooms:(d.rooms||[]).length,sides:xsides(d).length,types:typeChosen(d)?jobTypes(d):(r&&r.types)||null,modified:Math.max(d.updated||0,r?Date.parse(r.modified)||0:0),status:(r&&OKST[r.status])?r.status:'new',remote:!!r,tags:[]};
   let dirty=true;try{dirty=isDirty(d)}catch(e){}
   if(d.pendingUpload)c.tags.push(['pend','Waiting to upload']);
   else if(!d.uploadedAt&&!r)c.tags.push(['pend','Not uploaded']);
@@ -1172,13 +1411,14 @@ function boardCards(){
   if(d.id===cur)c.tags.push(['','Last opened']);
   out.push(c)}
  for(const r of B.rows||[]){if(!r||!r.id||seen.has(r.id))continue;
-  out.push({id:r.id,fileId:r.fileId,address:r.address||'',customer:r.customer||'',estimate:r.estimate||'',date:r.date||'',rooms:r.rooms||0,
+  out.push({id:r.id,fileId:r.fileId,address:r.address||'',customer:r.customer||'',estimate:r.estimate||'',date:r.date||'',rooms:r.rooms||0,sides:r.sides||0,types:Array.isArray(r.types)?r.types:null,
    modified:Date.parse(r.modified)||0,status:OKST[r.status]?r.status:'new',remote:true,tags:[]})}
  for(const c of out){const q=Q[c.id];if(q&&OKST[q.status]){c.status=q.status;if(UPLOAD_ENDPOINT&&c.remote)c.tags.push(['','Status not synced yet'])}}
  return out}
-function cardHTML(c){const rooms=c.rooms+' room'+(c.rooms===1?'':'s');
+function cardHTML(c){const T=c.types||[],ext=T.includes('exterior')||c.sides>0,int=!ext||T.includes('interior')||c.rooms>0;
+ const rooms=[int&&c.rooms+' room'+(c.rooms===1?'':'s'),ext&&c.sides+' side'+(c.sides===1?'':'s')].filter(Boolean).join(' · ');
  return `<div class="bcard" role="button" tabindex="0" data-act="openwt" data-id="${esc(c.id)}"${matchMedia('(pointer:fine)').matches?' draggable="true"':''}>
- <b>${esc(c.address||'(no address yet)')}</b>
+ <b>${esc(c.address||'(no address yet)')}</b>${ext?`<small><span class="btag">${int?'Interior + Exterior':'Exterior'}</span></small>`:''}
  ${[c.customer,c.estimate&&'PaintScout #'+c.estimate].some(Boolean)?`<small>${esc([c.customer,c.estimate&&'PaintScout #'+c.estimate].filter(Boolean).join(' · '))}</small>`:''}
  <small>${esc([c.date&&'Walkthrough '+fmtD(c.date),rooms,c.modified&&'updated '+fmtAgo(c.modified)].filter(Boolean).join(' · '))}</small>
  <div class="bfoot"><div class="btags">${c.tags.map(([k,t])=>`<span class="ubadge ${k}">${esc(t)}</span>`).join('')}</div>
@@ -1204,7 +1444,7 @@ function homeSub(){const el=$('#hsub');if(!el)return;const B=board(),t=B.fetched
  el.classList.toggle('off',!navigator.onLine||!!BS.need)}
 function renderHome(){
  VIEW='home';document.body.classList.add('home');closeSheet();$('#ttl').textContent='Walkthroughs';
- $('#app').innerHTML=tipCard()+`<section class="card hero"><div class="cpad"><button class="newbtn" data-act="new">+ New walkthrough</button>
+ $('#app').innerHTML=tipCard()+`<section class="card hero"><div class="cpad"><div class="newrow"><button class="newbtn" data-act="new" data-t="interior">New Interior Estimate</button><button class="newbtn" data-act="new" data-t="exterior">New Exterior Estimate</button></div>
  <input class="field bsearch" id="bq" type="search" placeholder="Search name, address, or PaintScout #" value="${esc(BS.q)}" autocomplete="off" enterkeyhint="search" aria-label="Search walkthroughs"></div></section>
  <div id="pinBox">${pinCard()}</div><div id="boardBox"></div>`;
  drawBoard();homeSub()}
@@ -1243,6 +1483,7 @@ function savePin(){const i=$('#pinIn'),v=i?i.value.trim():'';if(!v){i&&i.focus()
 function storeFetched(j,row){
  const w=j.payload.walkthrough,d=JSON.parse(JSON.stringify(w));
  (d.rooms||[]).forEach(r=>{delete r.productSheenEffective;delete r.derived;r.collapsed=true});
+ xsides(d).forEach(x=>{delete x.derived;x.collapsed=true});
  d.jobCollapsed=!!(d.rooms||[]).length;delete d.generalCollapsed;delete d.jobPicking;delete d.jobTyping;if(!d.schema)d.schema=SCHEMA;
  migrate(d);
  d.uploadedAt=Date.now();d.pendingUpload=false;d.driveFileId=j.fileId||(row&&row.fileId)||null;
@@ -1279,10 +1520,16 @@ function showRoomMenu(id){const r=roomById(id);if(!r)return;
  <button class="menuitem" data-act="dup">Duplicate room<small>patching & notes left blank</small></button>
  <button class="menuitem" data-act="del" style="color:var(--danger)">Delete room…</button>
  <button class="menuitem" data-act="close">Cancel</button></div>`)}
-document.addEventListener('pointerdown',e=>{LP.fired=false;const m=e.target.closest&&e.target.closest('[data-lp=room]');if(!m||(e.pointerType==='mouse'&&e.button!==0))return;
+function showSideMenu(id){const x=sideById(id);if(!x)return;
+ LP.openedAt=Date.now(); if(navigator.vibrate)try{navigator.vibrate(12)}catch(e){}
+ openSheet(`<div data-side="${esc(id)}"><h3>${esc(x.name||'Untitled side')}</h3>
+ <button class="menuitem" data-act="sdup">Duplicate side<small>notes, masking & other left blank</small></button>
+ <button class="menuitem" data-act="sdel" style="color:var(--danger)">Delete side…</button>
+ <button class="menuitem" data-act="close">Cancel</button></div>`)}
+const lpOpen=m=>{const h=m.closest('[data-side]');if(h)showSideMenu(h.dataset.side);else showRoomMenu(m.closest('[data-room]').dataset.room)};
+document.addEventListener('pointerdown',e=>{LP.fired=false;const m=e.target.closest&&e.target.closest('[data-lp]');if(!m||(e.pointerType==='mouse'&&e.button!==0))return;
  lpCancel();LP.el=m;LP.x=e.clientX;LP.y=e.clientY;LP.sy=scrollY;m.classList.add('holding');
- const id=m.closest('[data-room]').dataset.room;
- LP.t=setTimeout(()=>{LP.fired=true;lpCancel();showRoomMenu(id)},500)});
+ LP.t=setTimeout(()=>{LP.fired=true;lpCancel();lpOpen(m)},500)});
 document.addEventListener('pointermove',e=>{if(LP.el&&Math.hypot(e.clientX-LP.x,e.clientY-LP.y)>10)lpCancel()});
 ['pointerup','pointercancel'].forEach(t=>document.addEventListener(t,lpCancel));
 document.addEventListener('scroll',()=>{if(LP.el&&Math.abs(scrollY-LP.sy)>10)lpCancel()},{passive:true});
@@ -1291,10 +1538,10 @@ document.addEventListener('click',e=>{if(!LP.fired)return;LP.fired=false;
  const inSheet=e.target.closest&&e.target.closest('#sheet');
  if(!inSheet||Date.now()-LP.openedAt<1000){e.preventDefault();e.stopImmediatePropagation()}},true);
 // touch: lifting the finger after the menu opened sends no click at all (so it can't land on a menu item)
-document.addEventListener('touchend',e=>{if(LP.fired&&e.target.closest&&e.target.closest('[data-lp=room]')&&e.cancelable){e.preventDefault();LP.fired=false}},{passive:false});
-document.addEventListener('contextmenu',e=>{const m=e.target.closest&&e.target.closest('[data-lp=room]');if(!m)return;e.preventDefault();
- if(!LP.fired){lpCancel();LP.fired=true;showRoomMenu(m.closest('[data-room]').dataset.room)}});
-document.addEventListener('selectstart',e=>{if(e.target.closest&&e.target.closest('[data-lp=room]'))e.preventDefault()});
+document.addEventListener('touchend',e=>{if(LP.fired&&e.target.closest&&e.target.closest('[data-lp]')&&e.cancelable){e.preventDefault();LP.fired=false}},{passive:false});
+document.addEventListener('contextmenu',e=>{const m=e.target.closest&&e.target.closest('[data-lp]');if(!m)return;e.preventDefault();
+ if(!LP.fired){lpCancel();LP.fired=true;lpOpen(m)}});
+document.addEventListener('selectstart',e=>{if(e.target.closest&&e.target.closest('[data-lp]'))e.preventDefault()});
 /* ---------- iOS: Add to Home Screen tip ---------- */
 const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const isStandalone=()=>navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
