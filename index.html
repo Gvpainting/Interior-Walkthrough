@@ -280,6 +280,15 @@ body:not(.home) #hsub{display:none}
 .newbtn{flex:1 1 260px;min-height:60px;border-radius:16px;background:var(--accent);color:#fff;font-size:19px;font-weight:700;box-shadow:0 4px 14px rgba(47,109,181,.3)}
 .newbtn:active{transform:scale(.98)}
 .bsearch{flex:2 1 320px}
+.pscards{margin-bottom:14px}.pscards .cpad{padding-bottom:10px}
+.pshead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 4px}.pshead h2{margin:0;font-size:20px}.pshead small{color:var(--sub);font-size:14px}
+.psnote{font-size:14px;color:var(--sub);margin:0 0 10px}.psnote.off{color:#8a5a00}
+.psgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.pscard{background:#f5f9ff;border:1px dashed #7aa7d6;border-radius:14px;padding:12px 14px;cursor:pointer}
+.pscard b{display:block;font-size:17px;margin:4px 0 2px}.pscard small{display:block;color:var(--sub);font-size:14px;line-height:1.4}
+.pstag{display:inline-block;padding:1px 8px;border-radius:999px;background:#dcebfb;color:#1f5d99;font-size:12px;font-weight:700;margin-right:4px}
+.psbtns{display:flex;gap:8px;margin-top:10px}.psbtns button{flex:1;min-height:44px;border-radius:11px;background:var(--accent);color:#fff;font-size:15px;font-weight:600}
+.psbtns button+button{background:#3d7a5a}
 .bcount{margin:4px 4px 12px;color:var(--sub);font-size:15px}.bcount b{color:var(--ink)}
 .board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start}
 .bcol{background:#e8eaf0;border-radius:18px;padding:10px;min-height:120px}
@@ -349,9 +358,10 @@ body:not(.home) #hsub{display:none}
 .typeone b{color:var(--ink)}.typeone .linkbtn{margin:0 0 0 auto;font-weight:600}
 .badge.xb{background:#3d7a5a}
 /* counts sit right after the label, like "# Doors: 2" on the paper sheet; grey ends just after the +/- */
-.xcounts .list{width:fit-content;max-width:100%}
-.xcounts .row{justify-content:flex-start;gap:12px;padding-right:8px}
-.xcounts .row .rl{flex:0 0 9.75em;line-height:1.25}
+.xcounts .list{width:fit-content;max-width:100%;overflow:visible}
+.xcounts .row{display:grid;grid-template-columns:minmax(3.5em,9.75em) max-content;justify-content:start;gap:12px;padding-right:8px}
+.xcounts .row .rl{min-width:0;line-height:1.25;overflow-wrap:anywhere}
+.row .rl{min-width:0}.stepper{flex:none;white-space:nowrap}.stepper button,.stepper input{flex:none;padding:0;margin:0}
 .xsize{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
 .xsize .xlen{flex:0 0 150px}.xsize .xlen .field{text-align:center;font-size:22px;font-weight:600;min-height:56px}
 .xsize .xh{flex:1 1 300px;min-width:0}.xsize .xh .chips{gap:8px}
@@ -684,13 +694,14 @@ function jobHead(J){
   <div><button type="button" class="chip addrpick" data-act="typeaddr">Type an address</button>${J.address?'<button type="button" class="chip addrpick" data-act="pickcancel">Cancel</button>':''}</div></div>`};
  if(S.jobPicking) return picks();
  if(J.address&&!S.jobTyping) return `<div class="full jcard"><div class="jaddr">${esc(J.address)}</div>
-  ${J.name?`<div class="jline">${esc(J.name)}</div>`:''}${J.phone?`<div class="jline"><a href="tel:${esc(J.phone.replace(/[^\d+]/g,''))}">${esc(J.phone)}</a></div>`:''}
+  ${J.name?`<div class="jline">${esc(J.name)}</div>`:''}${J.phone?`<div class="jline"><a href="tel:${esc(J.phone.replace(/[^\d+]/g,''))}">${esc(J.phone)}</a></div>`:''}${J.email?`<div class="jline"><a href="mailto:${esc(J.email)}">${esc(J.email)}</a></div>`:''}
   <div class="jline dim">${esc([J.estimate&&'PaintScout #'+J.estimate,fmtWhen(J.when)].filter(Boolean).join(' · '))}</div>
   <button type="button" class="chip addrpick" data-act="changejob">Change job</button></div>`;
  return `<label class="full"><span class="flabel">Job address</span>${field('address',J.address,'Street, city','autocomplete="off" autocapitalize="words" enterkeyhint="done" data-ac role="combobox" aria-autocomplete="list"')}<div class="subl" style="margin-top:6px">The address being painted. We match it to the PaintScout job.</div><datalist id="gvAddrs">${recentAddrs().map(x=>`<option value="${esc(x)}">`).join('')}</datalist></label>
  ${(upcoming().length||recentAddrs().length)?'<div class="full"><button type="button" class="chip addrpick" data-act="changejob">Pick a saved job</button>'+(J.address?'<button type="button" class="chip addrpick" data-act="jobdone">Done</button>':'')+'</div>':(J.address?'<div class="full"><button type="button" class="chip addrpick" data-act="jobdone">Done</button></div>':'')}`;
 }
 function applyJob(j,src){const J=S.job;J.address=j.address||'';J.name=j.name||'';J.phone=j.phone||'';J.estimate=j.estimate||'';J.when=j.when||'';J.source=src;
+ J.psId=j.psId||'';J.email=j.email||''; // v13: PaintScout quote id + customer email from the portal's PaintScout card
  S.jobPicking=false;S.jobTyping=false;rememberAddr(J.address);save();render();title()}
 function jobCard(){
  const J=S.job;
@@ -1070,6 +1081,7 @@ function act(a,b){
  case 'list':goHome();break;
  case 'home':goHome();break;
  case 'openwt':openFromBoard(b.dataset.id);break;
+ case 'psstart':startFromPS(b.dataset.ps,b.dataset.t||'');break; // v13: card body = pick Interior / Exterior next; buttons = start that one
  case 'boardrefresh':closeSheet();refreshBoard();break;
  case 'savepin':savePin();break;
  case 'devicelist':showList();break;
@@ -1211,12 +1223,13 @@ async function saveSettings(){
 /* ---------- export / print / upload ---------- */
 function exportPayload(){
  const {jobCollapsed,generalCollapsed,jobPicking,jobTyping,uploadedSig,uploadedVersion,tab,...rest}=S;
- const out={schema:SCHEMA,exportedAt:new Date().toISOString(),app:'Grandview Walkthrough (v12)',
+ const out={schema:SCHEMA,exportedAt:new Date().toISOString(),app:'Grandview Walkthrough (v13)',
   job:{address:(S.job.address||'').trim()||null,standardProduct:stdName(),customerName:S.job.name||null,phone:S.job.phone||null,paintscoutEstimate:S.job.estimate||null,appointment:S.job.when||null,source:S.job.source==='link'?'link':'manual'},
   walkthrough:Object.assign({},rest,{rooms:S.rooms.map(r=>{const {collapsed,ui,...x}=r,c=JSON.parse(JSON.stringify(x));
    c.productSheen.bySurface=Object.fromEntries(Object.entries(c.productSheen.bySurface||{}).map(([k,o])=>[k,{product:(o.product||'').trim(),sheen:o.sheen||''}]).filter(([,o])=>o.product||o.sheen));
    return Object.assign(c,{productSheenEffective:psEffective(r),derived:derive(r)})})})};
  // v12: exterior (only on walkthroughs that have it). Each side gets derived.wallSqft = length × height.
+ if(S.job.psId) out.job.paintscoutId=S.job.psId; if(S.job.email) out.job.email=S.job.email; // v13
  if(rest.exterior) out.walkthrough.exterior={sides:xsides().map(x=>{const {collapsed,...y}=x;return Object.assign(JSON.parse(JSON.stringify(y)),{derived:deriveSide(x)})}),notes:Object.assign(blankXNotes(),S.exterior.notes||{})};
  return out;
 }
@@ -1371,7 +1384,7 @@ function toast(m,ms=2600){const t=$('#toast');t.textContent=m;t.classList.add('s
    Reads come from the same Apps Script web app as uploads (type list/get/status) and need the office PIN,
    which is typed once per device (gear > Office PIN) and is NOT built into the app. */
 let VIEW='edit';
-const K_BOARD='gv-board-cache',K_STQ='gv-status-queue',K_PIN='gv-read-pin';
+const K_BOARD='gv-board-cache',K_STQ='gv-status-queue',K_PIN='gv-read-pin',K_PS='gv-ps-cards'; // v13: last list of PaintScout cards
 const COLS=[['new','New'],['in_progress','In progress'],['finished','Finished']],OKST={new:1,in_progress:1,finished:1};
 const jget=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
 const jset=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
@@ -1423,7 +1436,35 @@ function cardHTML(c){const T=c.types||[],ext=T.includes('exterior')||c.sides>0,i
  <small>${esc([c.date&&'Walkthrough '+fmtD(c.date),rooms,c.modified&&'updated '+fmtAgo(c.modified)].filter(Boolean).join(' · '))}</small>
  <div class="bfoot"><div class="btags">${c.tags.map(([k,t])=>`<span class="ubadge ${k}">${esc(t)}</span>`).join('')}</div>
  <select class="bst" data-id="${esc(c.id)}" aria-label="Estimating status">${COLS.map(([k,l])=>`<option value="${k}"${k===c.status?' selected':''}>${l}</option>`).join('')}</select></div></div>`}
-function drawBoard(){const box=$('#boardBox');if(!box)return;
+/* v13: PaintScout cards. Same cards as the portal (server drops walked / hidden ones); here we also drop any card
+   that already has a walkthrough on this iPad or on the company board, so a stale offline list never doubles up. */
+const psList=()=>jget(K_PS,{rows:[],fetchedAt:0});
+function psCards(){
+ const docs=Object.values(readIndex()).map(m=>loadDoc(m.id)).filter(d=>d&&d.job&&!isEmpty(d)),rows=board().rows||[];
+ return (psList().rows||[]).filter(c=>c&&c.paintscoutId&&!docs.some(d=>d.job.psId===c.paintscoutId||(c.estimate&&d.job.estimate===c.estimate))
+  &&!rows.some(r=>r.paintscoutId===c.paintscoutId||(c.estimate&&String(r.estimate||'').replace(/^#/,'')===c.estimate)))}
+function psCardHTML(c){const when=c.created?new Date(c.created):null;
+ return `<div class="pscard" role="button" tabindex="0" data-act="psstart" data-ps="${esc(c.paintscoutId)}"><span class="pstag">Ready to walk through</span>${c.psType?`<span class="btag">${esc(c.psType)}</span>`:''}
+ <b>${esc(c.address||'(no job address in PaintScout)')}</b><small>${esc([c.customer,c.estimate&&'PaintScout #'+c.estimate].filter(Boolean).join(' · '))}</small>
+ <small>${esc([c.phone,when&&!isNaN(when)&&'Draft created '+when.toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})].filter(Boolean).join(' · '))}</small>
+ <div class="psbtns"><button data-act="psstart" data-ps="${esc(c.paintscoutId)}" data-t="interior">Start Interior</button><button data-act="psstart" data-ps="${esc(c.paintscoutId)}" data-t="exterior">Start Exterior</button></div></div>`}
+function drawPS(){const box=$('#psBox');if(!box)return;const L=psList(),all=psCards(),terms=BS.q.toLowerCase().split(/\s+/).filter(Boolean);
+ const hits=all.filter(c=>terms.every(t=>[c.address,c.customer,c.estimate,'#'+c.estimate,c.phone,c.psType].join(' ').toLowerCase().includes(t)));
+ if(!all.length){box.innerHTML='';return}
+ const t=L.fetchedAt?fmtAgo(L.fetchedAt):'',off=!navigator.onLine;
+ box.innerHTML=`<section class="card pscards"><div class="cpad"><div class="pshead"><h2>Ready to walk through</h2><small>${all.length} from PaintScout</small></div>
+ <p class="psnote${off?' off':''}">${off?esc('Offline · this list is from '+t+'. It may have changed since.'):esc('Tap one to start the walkthrough with the customer filled in. Updated '+t+'.')}</p>
+ <div class="psgrid">${hits.map(psCardHTML).join('')||'<div class="bempty">No matches</div>'}</div></div></section>`}
+function startFromPS(id,t){const c=(psList().rows||[]).find(x=>x.paintscoutId===id);if(!c)return;
+ const j={address:c.address||'',name:c.customer||'',phone:c.phone||'',estimate:String(c.estimate||'').replace(/^#/,''),when:'',psId:c.paintscoutId,email:c.email||''};
+ saveUpcoming(j);
+ const docs=Object.values(readIndex()).map(m=>loadDoc(m.id)).filter(Boolean);
+ const hit=docs.find(d=>d.job&&d.job.psId===j.psId)||(j.estimate&&docs.find(d=>d.job&&d.job.estimate===j.estimate));
+ VIEW='edit';document.body.classList.remove('home');openDoc(hit?hit.id:null);
+ applyJob(Object.assign({},S.job,Object.fromEntries(Object.entries(j).filter(([,v])=>v))),'link');
+ if(t&&!typeChosen(S)){S.types=[t];if(t!=='interior')ensureExterior();S.tab=t==='exterior'?'exterior':'interior';save();render()}
+ window.scrollTo(0,0);toast((hit?'Opened':'Started')+' '+(j.address||'PaintScout #'+j.estimate))}
+function drawBoard(){drawPS();const box=$('#boardBox');if(!box)return;
  const all=boardCards(),terms=BS.q.toLowerCase().split(/\s+/).filter(Boolean);
  const hay=c=>[c.address,c.customer,c.estimate,c.estimate&&'#'+c.estimate,c.date,fmtD(c.date)].join(' ').toLowerCase();
  const hits=all.filter(c=>terms.every(t=>hay(c).includes(t)));
@@ -1446,7 +1487,7 @@ function renderHome(){
  VIEW='home';document.body.classList.add('home');closeSheet();$('#ttl').textContent='Walkthroughs';
  $('#app').innerHTML=tipCard()+`<section class="card hero"><div class="cpad"><div class="newrow"><button class="newbtn" data-act="new" data-t="interior">New Interior Estimate</button><button class="newbtn" data-act="new" data-t="exterior">New Exterior Estimate</button></div>
  <input class="field bsearch" id="bq" type="search" placeholder="Search name, address, or PaintScout #" value="${esc(BS.q)}" autocomplete="off" enterkeyhint="search" aria-label="Search walkthroughs"></div></section>
- <div id="pinBox">${pinCard()}</div><div id="boardBox"></div>`;
+ <div id="pinBox">${pinCard()}</div><div id="psBox"></div><div id="boardBox"></div>`;
  drawBoard();homeSub()}
 function paintHome(){if(VIEW!=='home')return;if(!$('#boardBox'))return renderHome();const p=$('#pinBox'),f=document.activeElement&&document.activeElement.id==='pinIn';if(!f)p.innerHTML=pinCard();drawBoard();homeSub()}
 function goHome(){
@@ -1460,7 +1501,11 @@ function refreshBoard(){
  if(boardBusy)return boardBusy;
  BS.loading=true;homeSub();
  boardBusy=(async()=>{try{await flushStatus();const j=await api({type:'list'});
-   if(j.ok){jset(K_BOARD,{rows:j.rows||[],fetchedAt:Date.now()});BS.need=''}else BS.need=needOf(j)||BS.need}
+   if(j.ok){jset(K_BOARD,{rows:j.rows||[],fetchedAt:Date.now()});BS.need='';
+    try{const p=await api({type:'pending'}); // v13: PaintScout drafts not walked through yet
+     if(p.ok)jset(K_PS,{rows:p.rows||[],fetchedAt:Date.now()});
+     else if(!p.code&&/missing walkthrough|unknown schema/.test(p.error||''))jset(K_PS,{rows:[],fetchedAt:0})}catch(e){}} // office script without v13: no cards
+   else BS.need=needOf(j)||BS.need}
   catch(e){} // no signal / server down: keep showing the saved copy of the board
   finally{BS.loading=false;boardBusy=null;paintHome()}})();
  return boardBusy}
@@ -1570,12 +1615,13 @@ if(window.visualViewport){ visualViewport.addEventListener('resize',()=>{kbCheck
 function linkFromUrl(first){
  const parse=str=>{const o={};(str||'').replace(/^[#?]/,'').split('&').forEach(kv=>{if(!kv)return;const i=kv.indexOf('='),k=decodeURIComponent((i<0?kv:kv.slice(0,i)).replace(/\+/g,' ')).trim().toLowerCase();let v='';try{v=decodeURIComponent((i<0?'':kv.slice(i+1)).replace(/\+/g,' '))}catch(e){v=i<0?'':kv.slice(i+1)}o[k]=v.trim()});return o};
  const q=parse(location.search),h=parse(location.hash),g=k=>(h[k]!=null&&h[k]!==''?h[k]:(q[k]||''));
- const j={address:g('address'),name:g('name'),phone:g('phone'),estimate:(g('estimate')||g('job')).replace(/^\s*#\s*/,'').trim(),when:g('when')};
+ const j={address:g('address'),name:g('name'),phone:g('phone'),estimate:(g('estimate')||g('job')).replace(/^\s*#\s*/,'').trim(),when:g('when'),
+  psId:g('psid').replace(/[^\w-]/g,'').slice(0,64),email:g('email')}; // v13: psid/email come from the portal's PaintScout cards
  if(!j.address&&!j.estimate&&!j.name){if(first)goHome();return}
  history.replaceState(null,'',location.pathname);
  saveUpcoming(j);
  const docs=Object.values(readIndex()).map(m=>loadDoc(m.id)).filter(Boolean);
- const hit=docs.find(d=>d.job&&(j.estimate?d.job.estimate===j.estimate:(j.address&&(d.job.address||'').toLowerCase()===j.address.toLowerCase())));
+ const hit=(j.psId&&docs.find(d=>d.job&&d.job.psId===j.psId))||docs.find(d=>d.job&&(j.estimate?d.job.estimate===j.estimate:(j.address&&(d.job.address||'').toLowerCase()===j.address.toLowerCase())));
  VIEW='edit'; openDoc(hit?hit.id:null); applyJob(Object.assign({},S.job,Object.fromEntries(Object.entries(j).filter(([,v])=>v))),'link');
  toast('Linked to '+(j.address||'PaintScout #'+j.estimate))}
 linkFromUrl(true); addEventListener('hashchange',()=>linkFromUrl(false));
