@@ -359,7 +359,7 @@ body:not(.home) #hsub{display:none}
 .badge.xb{background:#3d7a5a}
 /* counts sit right after the label, like "# Doors: 2" on the paper sheet; grey ends just after the +/- */
 .xcounts .list{width:fit-content;max-width:100%;overflow:visible}
-.xcounts .row{display:grid;grid-template-columns:minmax(3.5em,11.5em) max-content;justify-content:start;gap:12px;padding-right:8px}
+.xcounts .row{display:grid;grid-template-columns:minmax(3.5em,13.5em) max-content;justify-content:start;gap:12px;padding-right:8px}
 .xcounts .row .rl{min-width:0;line-height:1.25;overflow-wrap:anywhere}
 .xcounts .msklab{margin:14px 0 8px}
 .subchips .list{background:transparent;border-radius:0;overflow:visible}
@@ -493,8 +493,9 @@ const XSIDES=['Front','Back','Left','Right','Garage','Deck','Section'];
 const XSTORY=[[1,'1 story',10],[2,'2 story',20],[3,'3 story',30]];
 const XSIDING=['Metal','Wood','Vinyl','Brick','Stucco','Board & Batten','Concrete','SmartSiding'];
 const XCOUNTS=[['doors','Doors'],['garageDoors','Garage doors'],['windows','Windows'],['downspouts','Downspouts'],['shutters','Shutters']];
-// v14: mask items moved from the free-text "Any additional items to mask?" field into Counts steppers
-const XMASK=[['lightFixtures','Light fixtures'],['houseNumbers','House numbers'],['acUnits','AC units']];
+// v15: Items to mask is Light fixtures + Other items to mask (count). House numbers / AC units are legacy-only (still read if saved).
+const XMASK=[['lightFixtures','Light fixtures'],['otherMask','Other items to mask']];
+const XMASK_LEGACY=[['houseNumbers','House numbers'],['acUnits','AC units']];
 const XPAINT=[['siding','Siding'],['soffit','Soffit'],['fascia','Fascia'],['gutters','Gutters'],['downspouts','Downspouts'],['concreteStucco','Concrete / Stucco'],['windows','Windows'],['doors','Doors'],['garageDoors','Garage door']];
 // v14: "Garage door" under Doors is replaced by its own painting section (1 car / 2 car / frame). Old painting.doorsGarage is still read.
 const XSUB={windows:[['windowsTrim','Trim'],['windowsFrame','Frame'],['windowsWindow','Window']],doors:[['doorsTrim','Trim'],['doorsFrame','Frame'],['doorsExterior','Exterior door']]};
@@ -513,7 +514,7 @@ const needsType=d=>{d=d||S;return Array.isArray(d.types)&&!d.types.length&&!(d.r
 const typeLabel=d=>coversInt(d)&&coversExt(d)?'Interior + Exterior':coversExt(d)?'Exterior':'Interior';
 function blankSide(name=''){
  const o=a=>Object.fromEntries(a.map(([k])=>[k,'']));
- return {id:uid(),name,length:'',height:'',story:'',siding:[],counts:o([...XCOUNTS,...XMASK,...XGARAGE]),waterFaucet:'',outlets:'',mask:'',color:'',notes:'',
+ return {id:uid(),name,length:'',height:'',story:'',siding:[],counts:o([...XCOUNTS,...XMASK,...XGARAGE]),waterFaucet:'',outlets:'',garageHasWindows:'',mask:'',color:'',notes:'',
   painting:Object.fromEntries([...XPAINT,...XSUB.windows,...XSUB.doors].map(([k])=>[k,false])),other:'',collapsed:false};
 }
 const blankXNotes=()=>Object.assign(Object.fromEntries(XNOTES.map(([k])=>[k,false])),{lead:'',notes:''});
@@ -534,12 +535,14 @@ const storyKey=x=>x.story!==''&&x.story!=null?String(x.story):(filled(x.height)?
 const heightStr=x=>{if(!filled(x.height))return '';const st=storyOf(x);return x.height+' ft'+(st&&st[2]===x.height?' ('+st[1]+')':'')};
 function xPaintList(x){const P=x.painting||{};
  return XPAINT.filter(([k])=>P[k]).map(([k,l])=>{
-  if(k==='garageDoors'){const parts=XGARAGE.filter(([j])=>filled((x.counts||{})[j])).map(([j,t])=>(x.counts[j])+' '+t.toLowerCase());return l+(parts.length?' ('+parts.join(', ')+')':'')}
+  if(k==='garageDoors'){const parts=XGARAGE.filter(([j])=>filled((x.counts||{})[j])).map(([j,t])=>(x.counts[j])+' '+t.toLowerCase());
+   if(x.garageHasWindows==='yes')parts.push('has windows');else if(x.garageHasWindows==='no')parts.push('no windows');
+   return l+(parts.length?' ('+parts.join(', ')+')':'')}
   const sub=(XSUB[k]||[]).filter(([j])=>P[j]).map(([,t])=>t.toLowerCase());
   if(k==='doors'&&P.doorsGarage)sub.push('garage door');
   return l+(sub.length?' ('+sub.join(', ')+')':'')})
   .concat((x.other||'').trim()?['Other: '+x.other.trim()]:[])}
-function xCountsStr(x){return [...XCOUNTS,...XMASK].filter(([k])=>filled((x.counts||{})[k])).map(([k,l])=>{const v=x.counts[k];return v+' '+(v===1?l.replace(/s$/,''):l).toLowerCase()}).join(', ')}
+function xCountsStr(x){return [...XCOUNTS,...XMASK,...XMASK_LEGACY].filter(([k])=>filled((x.counts||{})[k])).map(([k,l])=>{const v=x.counts[k];return v+' '+(v===1?l.replace(/s$/,''):l).toLowerCase()}).join(', ')}
 function sideSummary(x){
  const a=[],b=[],dv=deriveSide(x);
  if(filled(x.length)||filled(x.height))a.push((filled(x.length)?x.length:'–')+' ft long × '+(heightStr(x)||'–'));
@@ -555,7 +558,7 @@ function sideSummary(x){
 function xNotesList(N){N=N||{};return XNOTES.filter(([k])=>N[k]).map(([,l])=>l.replace(/ \(.*\)$/,'')).concat(N.lead?['Lead: '+N.lead]:[])}
 function xTotals(d){const L=xsides(d),D=L.map(deriveSide),c=k=>L.reduce((a,x)=>a+(typeof (x.counts||{})[k]==='number'?x.counts[k]:0),0);
  const g1=c('garageDoors1Car'),g2=c('garageDoors2Car'),sized=g1+g2;
- return {sides:L.length,wallSqft:Math.round(D.reduce((a,v)=>a+(v.wallSqft||0),0)),doors:c('doors'),garageDoors:sized||c('garageDoors'),garageDoors1Car:g1,garageDoors2Car:g2,garageDoorFrame:c('garageDoorFrame'),windows:c('windows'),downspouts:c('downspouts'),shutters:c('shutters'),lightFixtures:c('lightFixtures'),houseNumbers:c('houseNumbers'),acUnits:c('acUnits')}}
+ return {sides:L.length,wallSqft:Math.round(D.reduce((a,v)=>a+(v.wallSqft||0),0)),doors:c('doors'),garageDoors:sized||c('garageDoors'),garageDoors1Car:g1,garageDoors2Car:g2,garageDoorFrame:c('garageDoorFrame'),windows:c('windows'),downspouts:c('downspouts'),shutters:c('shutters'),lightFixtures:c('lightFixtures'),otherMask:c('otherMask'),houseNumbers:c('houseNumbers'),acUnits:c('acUnits')}}
 function migrate(d){
  d.job=d.job||{};
  if(!d.job.standardProduct)d.job.standardProduct=STANDARD_PRODUCT; // older drafts were made when Standard = Duration Interior
@@ -877,7 +880,8 @@ function sideCard(x,i){
   <label style="display:block;margin-top:12px"><span class="flabel">Other items to mask</span>${area('mask',x.mask,'Anything else to mask on this side')}</label></div>`;
  const yn=(f,l)=>`<div class="ynrow"><span class="dl">${l}</span><div class="seg">${chipSeg(f,'yes','Yes',x[f])}${chipSeg(f,'no','No',x[f])}</div></div>`;
  const mask=`<div class="grp" data-xmask><h4>Masking</h4>${yn('waterFaucet','Water faucet available?')}${yn('outlets','Exterior outlets active?')}</div>`;
- const gDoor=reveal('painting.garageDoors',`<div class="subchips" data-xgarage><div class="cphead">Garage door</div><div class="list">${XGARAGE.map(([k,l])=>stepRow('counts.'+k,'# '+l,x.counts[k])).join('')}</div></div>`,P.garageDoors);
+ const gDoor=reveal('painting.garageDoors',`<div class="subchips" data-xgarage><div class="cphead">Garage door</div><div class="list">${XGARAGE.map(([k,l])=>stepRow('counts.'+k,'# '+l,x.counts[k])).join('')}</div>
+  <div style="margin-top:12px">${yn('garageHasWindows','Has windows')}</div></div>`,P.garageDoors);
  const paint=`<div class="grp full" data-xpaint><h4>What are we painting?</h4><div class="chips">${XPAINT.map(([k,l])=>chip('painting.'+k,l,P[k])).join('')}</div>
   ${['windows','doors'].map(g=>reveal('painting.'+g,`<div class="subchips"><div class="cphead">${g==='windows'?'Windows':'Doors'}</div><div class="chips">${XSUB[g].map(([k,l])=>chip('painting.'+k,l,P[k],null,'sm')).join('')}${g==='doors'&&P.doorsGarage?chip('painting.doorsGarage','Garage door',true,null,'sm'):''}</div></div>`,P[g])).join('')}
   ${gDoor}
@@ -1238,7 +1242,7 @@ async function saveSettings(){
 /* ---------- export / print / upload ---------- */
 function exportPayload(){
  const {jobCollapsed,generalCollapsed,jobPicking,jobTyping,uploadedSig,uploadedVersion,tab,...rest}=S;
- const out={schema:SCHEMA,exportedAt:new Date().toISOString(),app:'Grandview Walkthrough (v14)',
+ const out={schema:SCHEMA,exportedAt:new Date().toISOString(),app:'Grandview Walkthrough (v15)',
   job:{address:(S.job.address||'').trim()||null,standardProduct:stdName(),customerName:S.job.name||null,phone:S.job.phone||null,paintscoutEstimate:S.job.estimate||null,appointment:S.job.when||null,source:S.job.source==='link'?'link':'manual'},
   walkthrough:Object.assign({},rest,{rooms:S.rooms.map(r=>{const {collapsed,ui,...x}=r,c=JSON.parse(JSON.stringify(x));
    c.productSheen.bySurface=Object.fromEntries(Object.entries(c.productSheen.bySurface||{}).map(([k,o])=>[k,{product:(o.product||'').trim(),sheen:o.sheen||''}]).filter(([,o])=>o.product||o.sheen));
@@ -1294,13 +1298,13 @@ function renderPrint(){
  <div class="pr b" style="margin-top:10px">Color / product: ${u(x.color)}</div>
  <div class="pr b" style="margin-top:14px">Length: ${u(x.length)} &nbsp; Circle Height - ${XSTORY.map(([v,l,h])=>c(st===String(v),l+' ('+h+'ft)')).join(' ')}${st==='custom'?' '+c(true,'Other: '+x.height+' ft'):''} &nbsp; Wall sq ft: ${u(deriveSide(x).wallSqft??'')}</div>
  <div class="pr b">Siding Type: <span style="font-weight:400">${XSIDING.map(v=>c(x.siding.includes(v),v)).join(' - ')}</span></div>
- <div class="xrule xp2"><div>${[...XCOUNTS,...XMASK].map(([k,l])=>`<div class="pl"><b># ${esc(l)}:</b> ${esc((x.counts||{})[k])}</div>`).join('')}</div>
+ <div class="xrule xp2"><div>${[...XCOUNTS,...XMASK,...XMASK_LEGACY.filter(([k])=>filled((x.counts||{})[k]))].map(([k,l])=>`<div class="pl"><b># ${esc(l)}:</b> ${esc((x.counts||{})[k])}</div>`).join('')}</div>
   <div><div class="pl">Water Faucet Available? ${c(x.waterFaucet==='yes','Yes')} / ${c(x.waterFaucet==='no','No')}</div><div class="pl">Exterior Outlets Active? ${c(x.outlets==='yes','Yes')} / ${c(x.outlets==='no','No')}</div>
   <div class="pl"><b style="text-decoration:underline">Any Additional Items to Mask?</b></div>${note(x.mask)}</div></div>
  <div class="xrule"><b style="text-decoration:underline">What are we painting?</b><div class="xp3">
   <div>${['siding','soffit','fascia','gutters','downspouts'].map(k=>`<div class="pl">• ${c(P[k],XPAINT.find(p=>p[0]===k)[1])}</div>`).join('')}</div>
   <div><div class="pl">• ${c(P.concreteStucco,'Concrete / Stucco')}</div><div class="pl">• ${c(P.windows,'Windows:')}</div>${sub('windows')}</div>
-  <div><div class="pl">• ${c(P.doors,'Doors:')}</div>${sub('doors')}${P.doorsGarage?`<div class="pl xsub">○ ${c(true,'Garage door')}</div>`:''}<div class="pl">• ${c(P.garageDoors,'Garage door:')}</div>${XGARAGE.map(([k,l])=>`<div class="pl xsub">○ ${esc(l)}: ${u(P.garageDoors?(x.counts||{})[k]:'')}</div>`).join('')}</div></div>
+  <div><div class="pl">• ${c(P.doors,'Doors:')}</div>${sub('doors')}${P.doorsGarage?`<div class="pl xsub">○ ${c(true,'Garage door')}</div>`:''}<div class="pl">• ${c(P.garageDoors,'Garage door:')}</div>${XGARAGE.map(([k,l])=>`<div class="pl xsub">○ ${esc(l)}: ${u(P.garageDoors?(x.counts||{})[k]:'')}</div>`).join('')}${P.garageDoors?`<div class="pl xsub">○ Has windows: ${c(x.garageHasWindows==='yes','Yes')} / ${c(x.garageHasWindows==='no','No')}</div>`:''}</div></div>
   <div class="pl" style="margin-top:8px"><i>Other? →</i> ${u(x.other)}</div></div>
  <div class="xrule"><b>Notes:</b>${note(x.notes)}</div>
  <div class="xrule"><b style="text-decoration:underline">Additional Notes / Requirements:</b> <small>(whole house)</small>${xnotesHTML}</div></div>`};
